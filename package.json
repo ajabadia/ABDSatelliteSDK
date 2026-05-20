@@ -12,7 +12,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "tsc --noEmit",
-    "prepare": "tsup"
+    "prepare": "tsup",
+    "full-audit": "powershell -File ./scripts/abd-audit.ps1"
   },
   "dependencies": {
     "jose": "^6.2.3"
