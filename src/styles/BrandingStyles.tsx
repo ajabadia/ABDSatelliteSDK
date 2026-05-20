@@ -29,7 +29,7 @@ export async function BrandingStyles({
 
     const res = await fetch(verifyTenantUrl, {
       next: { revalidate: revalidateSeconds }
-    } as any);
+    } as RequestInit & { next?: { revalidate: number } });
 
     if (!res.ok) {
       return null;

@@ -11,7 +11,7 @@ async function resolveTenant(subdomain: string, providerUrl: string): Promise<Te
     const url = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
     const res = await fetch(url, {
       next: { revalidate: 60 }
-    } as any);
+    } as RequestInit & { next?: { revalidate: number } });
 
     if (res.ok) {
       return await res.json() as TenantInfo;
@@ -42,7 +42,7 @@ async function verifySessionExpiry(
         'Content-Type': 'application/json'
       },
       next: { revalidate: 0 }
-    } as any);
+    } as RequestInit & { next?: { revalidate: number } });
 
     if (response.ok) {
       const data = await response.json() as { active: boolean };

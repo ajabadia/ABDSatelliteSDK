@@ -1,3 +1,5 @@
+import type { NextRequest, NextResponse } from 'next/server';
+
 export interface TenantBrandingTheme {
   primary: string;
   secondary?: string;
@@ -49,5 +51,5 @@ export interface IndustrialAuthOptions {
   publicPaths?: string[];
   cookieName?: string;
   verifiedCookieName?: string;
-  intlMiddleware?: (request: any) => any;
+  intlMiddleware?: (request: NextRequest) => Promise<NextResponse> | NextResponse;
 }
