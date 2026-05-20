@@ -101,6 +101,7 @@ export default async function RootLayout({
     Use `getIndustrialSession()` or assert access using `ensureIndustrialAccess(role)`:
     ```typescript
     import { getIndustrialSession, ensureIndustrialAccess } from '@abd/satellite-sdk';
+// Types (FederatedSession, UserProfile) should be imported from '@/lib/session-types' instead of '@/lib/session'.
     
     export default async function ServerPage() {
       // Assert access (throws error if unauthorized, automatically handled by proxy)
@@ -115,7 +116,7 @@ export default async function RootLayout({
     ```tsx
     'use client';
     
-    import { useSession } from '@abd/satellite-sdk';
+    import { useSession } from '@abd/satellite-sdk/client';
     
     export default function ClientView() {
       const { session, status } = useSession();
@@ -124,5 +125,30 @@ export default async function RootLayout({
       
       return <span>User: {session.user?.email}</span>;
     }
+    ```
+
+## 7. Lessons Learned & Best Practices (Critical for Next.js 16 / Turbopack)
+
+### ⚠️ React Server Components (RSC) vs Client Components imports
+Next.js 16 + Turbopack will fail with `TypeError: (0, X.createContext) is not a function` if client hooks/providers (`useSession`, `SessionProvider`) and server components (`BrandingStyles`, `getIndustrialSession`) are mixed in import routes or if Server Components import `react` directly.
+*   **Always** import server components from `@abd/satellite-sdk` (RSC-friendly).
+*   **Always** import client hooks/providers from `@abd/satellite-sdk/client`.
+*   Avoid importing `React` in Server Components. Prefer standard React JSX shorthand `<>...</>` to rely exclusively on `react/jsx-runtime`.
+
+### 🧭 Sidebar Navigation Customization
+When utilizing `TacticalSidebar` from `@abd/styles`:
+*   Make sure to pass `homeHref={/${locale}}` (or equivalent localized root path) to the sidebar so the logo click doesn't point to the default `/dashboard`.
+*   Pass a wrapper `LinkComponent` (like Next.js/next-intl `Link`) as a prop to keep page transitions within the single-page application router context.
+
+### 🔌 Silent Logout Handlers
+To prevent browser cookie latency and ensure local sessions are destroyed instantly:
+*   In the sidebar's `onLogout` handler, fetch the silent logout endpoint before redirection:
+    ```typescript
+    const handleLogout = async () => {
+      // Clean cookies locally instantly
+      await fetch('/api/auth/logout?silent=true', { method: 'GET' }).catch(() => null);
+      // Hard redirect to central IdP logout
+      window.location.href = '/api/auth/logout';
+    };
     ```
 ```
