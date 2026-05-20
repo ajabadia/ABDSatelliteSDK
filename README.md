@@ -1,0 +1,134 @@
+# 🛰️ @abd/satellite-sdk
+
+Centralized npm package for high-speed integration of satellite applications within the **ABD Industrial Ecosystem**. 
+
+It encapsulates SSO federated callbacks, JWT decryption with `jose`, domain-tenant resolution, cross-tenant security guardrails, allowed-apps licensing check, loop mitigation, and SSR branding style injections.
+
+---
+
+## 🚀 Quick Start (Under 5 Minutes)
+
+### 1. Install Dependecies
+
+Make sure `@abd/styles` is linked in your `package.json`, then install the SDK:
+
+```bash
+pnpm add @abd/satellite-sdk
+```
+
+### 2. Configure Environment Variables (`.env`)
+
+```env
+NEXT_PUBLIC_APP_ID="your-satellite-slug"
+AUTH_CLIENT_ID="your-client-id"
+AUTH_CLIENT_SECRET="your-super-secret-client-key"
+AUTH_JWT_SECRET="the-shared-suite-cryptographic-jwt-secret"
+AUTH_PROVIDER_URL="https://abd-auth.vercel.app"
+```
+
+### 3. Create the API Route Handler (`src/app/api/auth/[...auth]/route.ts`)
+
+Create a catch-all route to handle login callback, logout, and session status:
+
+```typescript
+import { createAuthRouteHandler } from '@abd/satellite-sdk';
+
+const handler = createAuthRouteHandler({
+  appId: process.env.NEXT_PUBLIC_APP_ID!,
+  clientId: process.env.AUTH_CLIENT_ID!,
+  clientSecret: process.env.AUTH_CLIENT_SECRET!,
+  jwtSecret: process.env.AUTH_JWT_SECRET!,
+});
+
+export { handler as GET, handler as POST };
+```
+
+### 4. Create the Proxy Guard (`src/proxy.ts`)
+
+Protect your routes, handle allowedApps verification, and prevent loop redirections:
+
+```typescript
+import { withIndustrialAuth } from '@abd/satellite-sdk';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
+
+const intlMiddleware = createMiddleware(routing);
+
+export const proxy = withIndustrialAuth({
+  appId: process.env.NEXT_PUBLIC_APP_ID!,
+  clientId: process.env.AUTH_CLIENT_ID!,
+  clientSecret: process.env.AUTH_CLIENT_SECRET!,
+  jwtSecret: process.env.AUTH_JWT_SECRET!,
+  publicPaths: ['/', '/logout-success'],
+  intlMiddleware,
+});
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.svg$).*)'],
+};
+```
+
+### 5. Setup Root Layout (`src/app/[locale]/layout.tsx`)
+
+Inject tenant branding styles dynamically and wrap client components with the session provider:
+
+```tsx
+import { BrandingStyles, SessionProvider, getIndustrialSession } from '@abd/satellite-sdk';
+
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: { locale: string };
+}) {
+  const session = await getIndustrialSession();
+
+  return (
+    <html lang={params.locale}>
+      <head>
+        {/* Dynamic theme style injection (Zero-FOUC) */}
+        <BrandingStyles />
+      </head>
+      <body>
+        <SessionProvider initialSession={session}>
+          {children}
+        </SessionProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### 6. Read Session (Server & Client Components)
+
+*   **Server Components & APIs**:
+    ```typescript
+    import { getIndustrialSession, ensureIndustrialAccess } from '@abd/satellite-sdk';
+    
+    // Get session
+    const session = await getIndustrialSession();
+    
+    // Assert authorization
+    const user = await ensureIndustrialAccess('admin'); // Throws error if unauthorized
+    ```
+
+*   **Client Components**:
+    ```tsx
+    'use client';
+    
+    import { useSession } from '@abd/satellite-sdk';
+    
+    export default function Dashboard() {
+      const { session, status } = useSession();
+      
+      if (status === 'loading') return <p>Loading...</p>;
+      
+      return <h1>Hello, {session.user?.name}</h1>;
+    }
+    ```
+
+---
+
+## 🎨 Theme Injection Specs
+The SDK outputs the CSS variables compatible with Tailwind CSS v4 in real-time, resolving subdomain metadata and reading theme overrides. Colors are loaded seamlessly through HSL values mapped to `var(--primary)`, `var(--secondary)`, and `var(--background)`.

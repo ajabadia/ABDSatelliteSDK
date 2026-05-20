@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getIndustrialSession } from './session';
+import type { IndustrialAuthOptions } from './types';
+
+/**
+ * 🛰️ Factory function that generates a Next.js App Router API Route Handler.
+ * Integrates /session, /logout, and /federated/callback routes natively.
+ */
+export function createAuthRouteHandler(options: IndustrialAuthOptions) {
+  const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
+  const clientId = options.clientId;
+  const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || '';
+  const cookieName = options.cookieName || 'abd_session';
+  const verifiedCookieName = options.verifiedCookieName || 'abd_session_verified';
+
+  return async function handler(request: NextRequest) {
+    const { pathname, searchParams } = new URL(request.url);
+
+    // 1. Session Status Endpoint (/api/auth/session)
+    if (pathname.endsWith('/session')) {
+      const session = await getIndustrialSession(options.jwtSecret);
+      return NextResponse.json(session);
+    }
+
+    // 2. Logout Endpoint (/api/auth/logout)
+    if (pathname.endsWith('/logout')) {
+      const isSilent = searchParams.get('silent') === 'true';
+      const clearCookieConfig = {
+        path: '/',
+        maxAge: 0,
+        expires: new Date(0),
+        httpOnly: true,
+      };
+
+      if (isSilent) {
+        const response = new NextResponse(null, { status: 200 });
+        response.cookies.set(cookieName, '', clearCookieConfig);
+        response.cookies.set(verifiedCookieName, '', clearCookieConfig);
+
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        return response;
+      }
+
+      const appUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${new URL(request.url).protocol}//${new URL(request.url).host}`;
+      const redirectUri = `${appUrl}/logout-success`;
+      const providerLogoutUrl = `${providerUrl}/api/auth/logout`;
+
+      const response = NextResponse.redirect(
+        new URL(`${providerLogoutUrl}?redirect_uri=${encodeURIComponent(redirectUri)}`)
+      );
+
+      response.cookies.set(cookieName, '', clearCookieConfig);
+      response.cookies.set(verifiedCookieName, '', clearCookieConfig);
+
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+      return response;
+    }
+
+    // 3. OAuth Callback Endpoint (/api/auth/federated/callback)
+    if (pathname.endsWith('/federated/callback')) {
+      const code = searchParams.get('code');
+      const state = searchParams.get('state') || '/';
+
+      if (!code) {
+        return NextResponse.json({ error: 'No authorization code provided' }, { status: 400 });
+      }
+
+      try {
+        const tokenUrl = `${providerUrl}/api/auth/federated/token`;
+        const currentUrl = new URL(request.url);
+        const dynamicRedirectUri = `${currentUrl.protocol}//${currentUrl.host}/api/auth/federated/callback`;
+
+        const res = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: dynamicRedirectUri,
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          return NextResponse.json({ error: 'Token exchange failed', detail: errorData }, { status: 401 });
+        }
+
+        const data = await res.json() as { token: string };
+
+        const redirectResponse = NextResponse.redirect(new URL(state, request.url));
+        redirectResponse.cookies.set(cookieName, data.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 8, // 8-hour industrial shift
+        });
+
+        return redirectResponse;
+      } catch (err) {
+        console.error('[SDK_CALLBACK_EXCHANGE_ERROR]', err);
+        return NextResponse.json({ error: 'Internal server error during token exchange' }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ error: 'Route not found' }, { status: 404 });
+  };
+}
