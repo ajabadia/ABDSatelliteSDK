@@ -10,6 +10,14 @@ export interface TenantBrandingTheme {
 
 export interface TenantBranding {
   logoUrl?: string | null;
+  logo?: {
+    url?: string | null;
+    publicId?: string;
+  } | null;
+  favicon?: {
+    url?: string | null;
+    publicId?: string;
+  } | null;
   theme?: TenantBrandingTheme | null;
 }
 

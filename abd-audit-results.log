@@ -1,0 +1,15 @@
+﻿ABD SYSTEM AUDIT REPORT - 05/20/2026 08:42:04
+
+[MEDIUM:FIRE:LARGE_FILE] src\proxy.ts:1
+Message: WARNING: File is long (215 lines).
+>   1 | import { NextRequest, NextResponse } from 'next/server';
+    2 | import { verifyToken } from './utils/crypto';
+    3 | import { getTenantSubdomain } from './utils/subdomain';
+
+[PHASE:SUCCESS] [1/4 Structural Audit]: Passed successfully with 0 errors and 1 warnings.
+
+[PHASE:SUCCESS] [2/4 Purity & Types  ]: Passed successfully with 0 errors and 0 warnings.
+
+[PHASE:SUCCESS] [3/4 Type Safety (TSC)]: Passed successfully with 0 errors and 0 warnings.
+
+[PHASE:SUCCESS] [4/4 Engine Build      ]: Passed successfully with 0 errors and 0 warnings.

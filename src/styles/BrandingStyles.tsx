@@ -1,6 +1,5 @@
-import React from 'react';
 import { headers } from 'next/headers';
-import { generateTenantCss } from '@abd/styles';
+import { generateTenantCss } from '@abd/styles/dist/engine/css-generator.js';
 import { getTenantSubdomain } from '../utils/subdomain';
 import type { TenantInfo } from '../types';
 
@@ -38,17 +37,26 @@ export async function BrandingStyles({
     const data = await res.json() as TenantInfo;
     const branding = data.branding;
 
-    if (branding?.theme) {
-      const customCss = generateTenantCss(branding.theme);
-      if (customCss) {
-        return (
+    const customCss = branding?.theme ? generateTenantCss(branding.theme) : null;
+    const faviconUrl = branding?.favicon?.url || null;
+
+    if (!customCss && !faviconUrl) {
+      return null;
+    }
+
+    return (
+      <>
+        {customCss && (
           <style
             id="tenant-branding-gateway"
             dangerouslySetInnerHTML={{ __html: customCss }}
           />
-        );
-      }
-    }
+        )}
+        {faviconUrl && (
+          <link rel="icon" href={faviconUrl} />
+        )}
+      </>
+    );
   } catch (err) {
     console.error('[SDK_BRANDING_STYLES_ERROR] Failed to inject dynamic styling', err);
   }

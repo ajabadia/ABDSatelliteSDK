@@ -11,8 +11,6 @@ export { withIndustrialAuth } from './proxy';
 // Server-side session helpers
 export { getIndustrialSession, ensureIndustrialAccess } from './session';
 
-// Client-side hooks
-export { SessionProvider, useSession } from './client/useSession';
 
 // SSR Styling Component
 export { BrandingStyles } from './styles/BrandingStyles';

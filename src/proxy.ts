@@ -98,11 +98,25 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       }
     }
 
-    // 3. Match Public Paths
+    // 3. Match Public Paths (accounting for next-intl locale prefixes)
+    const getUnlocalizedPath = (path: string): string => {
+      const parts = path.split('/');
+      if (parts.length > 1 && parts[1].length === 2) {
+        return '/' + parts.slice(2).join('/');
+      }
+      return path;
+    };
+
+    const unlocalizedPath = getUnlocalizedPath(pathname);
     const isPublic = publicPaths.some(p => {
-      const normalizedPath = pathname.replace(/\/$/, '');
-      const normalizedParam = p.replace(/\/$/, '');
-      return normalizedPath === normalizedParam || pathname.startsWith(p + '/');
+      const normalizedPath = unlocalizedPath.replace(/\/$/, '') || '/';
+      const normalizedParam = p.replace(/\/$/, '') || '/';
+
+      if (normalizedParam === '/') {
+        return normalizedPath === '/';
+      }
+
+      return normalizedPath === normalizedParam || normalizedPath.startsWith(normalizedParam + '/');
     });
 
     // 4. Validate session JWT
