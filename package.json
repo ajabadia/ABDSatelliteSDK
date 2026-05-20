@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare": "tsup"
   },
   "dependencies": {
     "jose": "^6.2.3"
