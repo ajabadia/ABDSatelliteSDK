@@ -1,0 +1,23 @@
+# Dependencias y paquetes
+node_modules/
+.npm/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Carpetas de compilación (Output)
+dist/
+build/
+out/
+
+# Archivos temporales y caché de TypeScript
+.tsbuildinfo
+tsconfig.tsbuildinfo
+**/*.js.map
+
+# Logs de errores y sistema
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
