@@ -2,7 +2,7 @@
 node_modules/
 
 # Directorios de Compilación
-dist/
+# dist/ (included for GitHub distribution)
 .next/
 out/
 
