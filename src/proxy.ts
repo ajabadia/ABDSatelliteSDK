@@ -87,6 +87,8 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
 
+    console.log(`[SDK_PROXY] [${options.appId}] Intercepted request path: ${pathname}`);
+
     // 2. Resolve Tenant from Subdomain
     const host = request.headers.get('host');
     const subdomain = getTenantSubdomain(host);
@@ -98,6 +100,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       // Redirect if tenant is inactive
       if (!tenantInfo || !tenantInfo.active) {
         const baseAppUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+        console.warn(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
         return NextResponse.redirect(new URL(`${baseAppUrl}/logout-success?error=tenant_not_found`));
       }
     }
@@ -125,6 +128,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
 
     // 4. Validate session JWT
     const sessionCookie = request.cookies.get(cookieName);
+    console.log(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? 'PRESENT' : 'MISSING'}`);
     let isAuthenticated = false;
     let isAppNotAllowed = false;
     let didVerifyThisRequest = false;
@@ -134,8 +138,10 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     let userSessionId = '';
 
     if (sessionCookie?.value) {
+      console.log(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + '...' : 'undefined'}`);
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
       if (payload) {
+        console.log(`[SDK_PROXY] [${options.appId}] Token verified. user: ${payload.email}, tenant: ${payload.tenantId}`);
         isAuthenticated = true;
         userEmail = payload.email;
         userRole = payload.role;
@@ -150,6 +156,8 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
             isAppNotAllowed = true;
           }
         }
+      } else {
+        console.warn(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
       }
     }
 
@@ -171,9 +179,12 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     // 7. Session Expiry Desync Check
     if (isAuthenticated && sessionCookie && userEmail) {
       const verifiedCookie = request.cookies.get(verifiedCookieName);
+      console.log(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? 'PRESENT' : 'MISSING'}`);
 
       if (!verifiedCookie) {
+        console.log(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry for: ${userEmail}`);
         const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, request.url, providerUrl, clientSecret);
+        console.log(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
         if (isSessionActive) {
           didVerifyThisRequest = true;
         } else {
@@ -185,6 +196,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
 
     // 8. Bypass for public paths when not authenticated
     if (isPublic && !isAuthenticated) {
+      console.log(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
 
@@ -206,6 +218,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
         authorizeUrl.searchParams.set('tenant', tenantInfo.tenantId);
       }
 
+      console.log(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to: ${authorizeUrl.toString()}`);
       const response = NextResponse.redirect(authorizeUrl);
 
       // Clean up local cookies to break redirection loops

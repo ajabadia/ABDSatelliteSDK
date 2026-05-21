@@ -28,6 +28,7 @@ export async function verifyToken(token: string, customSecret?: string): Promise
     const { payload } = await jwtVerify(token, getSecretKey(customSecret));
     return payload as VerifiedTokenPayload;
   } catch (err) {
+    console.error("[SDK_JWT_VERIFY_ERROR] Failed to verify token:", err instanceof Error ? err.message : err);
     return null;
   }
 }

@@ -41,6 +41,7 @@ async function verifyToken(token, customSecret) {
     const { payload } = await (0, import_jose.jwtVerify)(token, getSecretKey(customSecret));
     return payload;
   } catch (err) {
+    console.error("[SDK_JWT_VERIFY_ERROR] Failed to verify token:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -126,6 +127,7 @@ function withIndustrialAuth(options) {
     if (isAsset) {
       return options.intlMiddleware ? options.intlMiddleware(request) : import_server.NextResponse.next();
     }
+    console.log(`[SDK_PROXY] [${options.appId}] Intercepted request path: ${pathname}`);
     const host = request.headers.get("host");
     const subdomain = getTenantSubdomain(host);
     let tenantInfo = null;
@@ -133,6 +135,7 @@ function withIndustrialAuth(options) {
       tenantInfo = await resolveTenant(subdomain, providerUrl);
       if (!tenantInfo || !tenantInfo.active) {
         const baseAppUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+        console.warn(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
         return import_server.NextResponse.redirect(new URL(`${baseAppUrl}/logout-success?error=tenant_not_found`));
       }
     }
@@ -153,6 +156,7 @@ function withIndustrialAuth(options) {
       return normalizedPath === normalizedParam || normalizedPath.startsWith(normalizedParam + "/");
     });
     const sessionCookie = request.cookies.get(cookieName);
+    console.log(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? "PRESENT" : "MISSING"}`);
     let isAuthenticated = false;
     let isAppNotAllowed = false;
     let didVerifyThisRequest = false;
@@ -161,8 +165,10 @@ function withIndustrialAuth(options) {
     let userTenantId = "";
     let userSessionId = "";
     if (sessionCookie?.value) {
+      console.log(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + "..." : "undefined"}`);
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
       if (payload) {
+        console.log(`[SDK_PROXY] [${options.appId}] Token verified. user: ${payload.email}, tenant: ${payload.tenantId}`);
         isAuthenticated = true;
         userEmail = payload.email;
         userRole = payload.role;
@@ -175,6 +181,8 @@ function withIndustrialAuth(options) {
             isAppNotAllowed = true;
           }
         }
+      } else {
+        console.warn(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
       }
     }
     if (isAuthenticated && tenantInfo && userTenantId !== tenantInfo.tenantId) {
@@ -190,8 +198,11 @@ function withIndustrialAuth(options) {
     }
     if (isAuthenticated && sessionCookie && userEmail) {
       const verifiedCookie = request.cookies.get(verifiedCookieName);
+      console.log(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? "PRESENT" : "MISSING"}`);
       if (!verifiedCookie) {
+        console.log(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry for: ${userEmail}`);
         const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, request.url, providerUrl, clientSecret);
+        console.log(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
         if (isSessionActive) {
           didVerifyThisRequest = true;
         } else {
@@ -201,6 +212,7 @@ function withIndustrialAuth(options) {
       }
     }
     if (isPublic && !isAuthenticated) {
+      console.log(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
       return options.intlMiddleware ? options.intlMiddleware(request) : import_server.NextResponse.next();
     }
     if (!isAuthenticated) {
@@ -216,6 +228,7 @@ function withIndustrialAuth(options) {
       if (tenantInfo) {
         authorizeUrl.searchParams.set("tenant", tenantInfo.tenantId);
       }
+      console.log(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to: ${authorizeUrl.toString()}`);
       const response2 = import_server.NextResponse.redirect(authorizeUrl);
       response2.cookies.set(cookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
       response2.cookies.set(verifiedCookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
