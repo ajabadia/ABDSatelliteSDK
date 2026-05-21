@@ -27,6 +27,7 @@ async function resolveTenant(subdomain: string, providerUrl: string): Promise<Te
  */
 async function verifySessionExpiry(
   email: string,
+  sessionId: string,
   requestUrl: string,
   providerUrl: string,
   clientSecret: string
@@ -34,6 +35,9 @@ async function verifySessionExpiry(
   try {
     const verifyUrl = new URL(`${providerUrl}/api/auth/session/verify`, requestUrl);
     verifyUrl.searchParams.set('email', email);
+    if (sessionId) {
+      verifyUrl.searchParams.set('sessionId', sessionId);
+    }
 
     const response = await fetch(verifyUrl.toString(), {
       method: 'GET',
@@ -127,6 +131,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     let userEmail = '';
     let userRole = '';
     let userTenantId = '';
+    let userSessionId = '';
 
     if (sessionCookie?.value) {
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
@@ -135,6 +140,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
         userEmail = payload.email;
         userRole = payload.role;
         userTenantId = payload.tenantId;
+        userSessionId = payload.sessionId || '';
 
         // Verify if user is licensed for this application
         if (payload.allowedApps && userRole !== 'SUPER_ADMIN') {
@@ -167,7 +173,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       const verifiedCookie = request.cookies.get(verifiedCookieName);
 
       if (!verifiedCookie) {
-        const isSessionActive = await verifySessionExpiry(userEmail, request.url, providerUrl, clientSecret);
+        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, request.url, providerUrl, clientSecret);
         if (isSessionActive) {
           didVerifyThisRequest = true;
         } else {

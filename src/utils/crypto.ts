@@ -11,6 +11,7 @@ export interface VerifiedTokenPayload extends JWTPayload {
   dbPrefix: string;
   isolationStrategy: string;
   allowedApps?: string[];
+  sessionId?: string;
 }
 
 function getSecretKey(customSecret?: string): Uint8Array {
