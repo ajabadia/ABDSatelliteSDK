@@ -1,51 +1,31 @@
-"use strict";
-"use client";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+"use strict";Object.defineProperty(exports, "__esModule", {value: true});"use client";
 
-// src/client.ts
-var client_exports = {};
-__export(client_exports, {
-  SessionProvider: () => SessionProvider,
-  useSession: () => useSession
-});
-module.exports = __toCommonJS(client_exports);
+
+var _chunkWCPFHMSBjs = require('./chunk-WCPFHMSB.js');
 
 // src/client/useSession.tsx
-var import_react = require("react");
-var import_jsx_runtime = require("react/jsx-runtime");
-var SessionContext = (0, import_react.createContext)(void 0);
+var _react = require('react');
+var _jsxruntime = require('react/jsx-runtime');
+var SessionContext = _react.createContext.call(void 0, void 0);
 var SessionProvider = ({
   children,
-  initialSession
+  initialSession,
+  refetchOnWindowFocus = true,
+  pollInterval = 0
 }) => {
-  const [session, setSession] = (0, import_react.useState)(
+  const [session, setSession] = _react.useState.call(void 0, 
     initialSession || { authenticated: false }
   );
-  const [status, setStatus] = (0, import_react.useState)(
+  const [status, setStatus] = _react.useState.call(void 0, 
     initialSession ? initialSession.authenticated ? "authenticated" : "unauthenticated" : "loading"
   );
-  const fetchSession = async () => {
+  const fetchSession = async (quiet = false) => {
     try {
-      setStatus("loading");
+      if (!quiet) setStatus("loading");
       const res = await fetch("/api/auth/session", { cache: "no-store" });
       if (res.ok) {
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = _chunkWCPFHMSBjs.FederatedSessionSchema.parse(rawData);
         setSession(data);
         setStatus(data.authenticated ? "authenticated" : "unauthenticated");
       } else {
@@ -58,23 +38,46 @@ var SessionProvider = ({
       setStatus("unauthenticated");
     }
   };
-  (0, import_react.useEffect)(() => {
+  _react.useEffect.call(void 0, () => {
     if (!initialSession) {
       fetchSession();
     }
   }, [initialSession]);
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SessionContext.Provider, { value: { session, status, update: fetchSession }, children });
+  _react.useEffect.call(void 0, () => {
+    if (!refetchOnWindowFocus) return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchSession(true);
+      }
+    };
+    const handleFocus = () => {
+      fetchSession(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refetchOnWindowFocus]);
+  _react.useEffect.call(void 0, () => {
+    if (pollInterval <= 0) return;
+    const interval = setInterval(() => {
+      fetchSession(true);
+    }, pollInterval);
+    return () => clearInterval(interval);
+  }, [pollInterval]);
+  return /* @__PURE__ */ _jsxruntime.jsx.call(void 0, SessionContext.Provider, { value: { session, status, update: fetchSession }, children });
 };
 function useSession() {
-  const context = (0, import_react.useContext)(SessionContext);
+  const context = _react.useContext.call(void 0, SessionContext);
   if (!context) {
     throw new Error("useSession must be used within a SessionProvider");
   }
   return context;
 }
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  SessionProvider,
-  useSession
-});
+
+
+
+exports.SessionProvider = SessionProvider; exports.useSession = useSession;
 //# sourceMappingURL=client.js.map

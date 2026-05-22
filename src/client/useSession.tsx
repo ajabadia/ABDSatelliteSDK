@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { FederatedSession, UserProfile } from '../types';
+import { FederatedSessionSchema } from '../utils/schemas.js';
 
 export interface ClientSessionContext {
   session: FederatedSession;
@@ -14,6 +15,10 @@ const SessionContext = createContext<ClientSessionContext | undefined>(undefined
 interface SessionProviderProps {
   children: React.ReactNode;
   initialSession?: FederatedSession;
+  /** Whether to automatically refetch session when window regains focus */
+  refetchOnWindowFocus?: boolean;
+  /** Polling interval in milliseconds (0 = disabled) */
+  pollInterval?: number;
 }
 
 /**
@@ -22,7 +27,9 @@ interface SessionProviderProps {
  */
 export const SessionProvider: React.FC<SessionProviderProps> = ({
   children,
-  initialSession
+  initialSession,
+  refetchOnWindowFocus = true,
+  pollInterval = 0
 }) => {
   const [session, setSession] = useState<FederatedSession>(
     initialSession || { authenticated: false }
@@ -33,12 +40,13 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       : 'loading'
   );
 
-  const fetchSession = async () => {
+  const fetchSession = async (quiet = false) => {
     try {
-      setStatus('loading');
+      if (!quiet) setStatus('loading');
       const res = await fetch('/api/auth/session', { cache: 'no-store' });
       if (res.ok) {
-        const data = await res.json() as FederatedSession;
+        const rawData = await res.json();
+        const data = FederatedSessionSchema.parse(rawData) as FederatedSession;
         setSession(data);
         setStatus(data.authenticated ? 'authenticated' : 'unauthenticated');
       } else {
@@ -58,6 +66,40 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       fetchSession();
     }
   }, [initialSession]);
+
+  // Window Focus Revalidation
+  useEffect(() => {
+    if (!refetchOnWindowFocus) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSession(true);
+      }
+    };
+
+    const handleFocus = () => {
+      fetchSession(true);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refetchOnWindowFocus]);
+
+  // Polling Revalidation
+  useEffect(() => {
+    if (pollInterval <= 0) return;
+    
+    const interval = setInterval(() => {
+      fetchSession(true);
+    }, pollInterval);
+    
+    return () => clearInterval(interval);
+  }, [pollInterval]);
 
   return (
     <SessionContext.Provider value={{ session, status, update: fetchSession }}>

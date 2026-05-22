@@ -1,5 +1,14 @@
 import type { NextRequest, NextResponse } from 'next/server';
 
+export interface NextFetchRequestConfig {
+  revalidate?: number | false;
+  tags?: string[];
+}
+
+export interface NextFetchRequestInit extends RequestInit {
+  next?: NextFetchRequestConfig;
+}
+
 export interface TenantBrandingTheme {
   primary: string;
   secondary?: string;

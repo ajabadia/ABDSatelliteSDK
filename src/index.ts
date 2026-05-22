@@ -9,8 +9,10 @@ export { getTenantSubdomain } from './utils/subdomain';
 export { withIndustrialAuth } from './proxy';
 
 // Server-side session helpers
-export { getIndustrialSession, ensureIndustrialAccess } from './session';
+export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
 
+// Schemas
+export * from './utils/schemas.js';
 
 // SSR Styling Component
 export { BrandingStyles } from './styles/BrandingStyles';

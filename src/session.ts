@@ -2,6 +2,20 @@ import { cookies } from 'next/headers';
 import { verifyToken } from './utils/crypto';
 import type { FederatedSession } from './types';
 
+export class UnauthorizedAccessError extends Error {
+  constructor(message = 'UNAUTHORIZED_ECOSYSTEM_ACCESS') {
+    super(message);
+    this.name = 'UnauthorizedAccessError';
+  }
+}
+
+export class InsufficientPrivilegesError extends Error {
+  constructor(message = 'INSUFFICIENT_INDUSTRIAL_PRIVILEGES') {
+    super(message);
+    this.name = 'InsufficientPrivilegesError';
+  }
+}
+
 /**
  * 🛰️ Retrieves the current federated session from the abd_session cookie.
  * Decrypts and verifies the JWT.
@@ -36,6 +50,9 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
       }
     };
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[SDK_GET_SESSION_ERROR] Failed to retrieve industrial session:', error instanceof Error ? error.message : error);
+    }
     return { authenticated: false };
   }
 }
@@ -49,11 +66,11 @@ export async function ensureIndustrialAccess(requiredRole?: string, customSecret
   const session = await getIndustrialSession(customSecret);
   
   if (!session.authenticated || !session.user) {
-    throw new Error('UNAUTHORIZED_ECOSYSTEM_ACCESS');
+    throw new UnauthorizedAccessError();
   }
 
   if (requiredRole && session.user.role !== requiredRole && session.user.role !== 'SUPER_ADMIN') {
-    throw new Error('INSUFFICIENT_INDUSTRIAL_PRIVILEGES');
+    throw new InsufficientPrivilegesError();
   }
 
   return session.user;

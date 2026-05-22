@@ -1,7 +1,8 @@
-import { I as IndustrialAuthOptions, U as UserProfile, F as FederatedSession } from './types-BnY5DCNp.js';
-export { T as TenantBranding, a as TenantBrandingTheme, b as TenantInfo } from './types-BnY5DCNp.js';
+import { I as IndustrialAuthOptions, U as UserProfile, F as FederatedSession } from './types-CLrrtVBg.js';
+export { N as NextFetchRequestConfig, a as NextFetchRequestInit, T as TenantBranding, b as TenantBrandingTheme, c as TenantInfo } from './types-CLrrtVBg.js';
 import { JWTPayload } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 
 interface VerifiedTokenPayload extends JWTPayload {
@@ -27,7 +28,7 @@ declare function verifyToken(token: string, customSecret?: string): Promise<Veri
  * 🏢 Helper to extract tenant subdomain from host header.
  * Excludes main Control Plane and localhost domains.
  */
-declare function getTenantSubdomain(host: string | null): string | null;
+declare function getTenantSubdomain(host: string | null, rootDomain?: string): string | null;
 
 /**
  * 🛰️ Higher-Order Proxy Guard (withIndustrialAuth) for Satellite Applications.
@@ -35,6 +36,12 @@ declare function getTenantSubdomain(host: string | null): string | null;
  */
 declare function withIndustrialAuth(options: IndustrialAuthOptions): (request: NextRequest) => Promise<NextResponse<unknown>>;
 
+declare class UnauthorizedAccessError extends Error {
+    constructor(message?: string);
+}
+declare class InsufficientPrivilegesError extends Error {
+    constructor(message?: string);
+}
 /**
  * 🛰️ Retrieves the current federated session from the abd_session cookie.
  * Decrypts and verifies the JWT.
@@ -46,6 +53,173 @@ declare function getIndustrialSession(customSecret?: string): Promise<FederatedS
  * Accounts for SUPER_ADMIN role bypass.
  */
 declare function ensureIndustrialAccess(requiredRole?: string, customSecret?: string): Promise<UserProfile>;
+
+declare const TenantInfoSchema: z.ZodObject<{
+    tenantId: z.ZodString;
+    active: z.ZodBoolean;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+}, "strip", z.ZodAny, z.objectOutputType<{
+    tenantId: z.ZodString;
+    active: z.ZodBoolean;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+}, z.ZodAny, "strip">, z.objectInputType<{
+    tenantId: z.ZodString;
+    active: z.ZodBoolean;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+}, z.ZodAny, "strip">>;
+declare const FederatedSessionSchema: z.ZodObject<{
+    authenticated: z.ZodBoolean;
+    user: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        name: z.ZodString;
+        surname: z.ZodString;
+        role: z.ZodString;
+        tenantId: z.ZodString;
+        permissions: z.ZodArray<z.ZodString, "many">;
+        dbPrefix: z.ZodString;
+        isolationStrategy: z.ZodString;
+        sessionId: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        tenantId: string;
+        id: string;
+        email: string;
+        name: string;
+        surname: string;
+        role: string;
+        permissions: string[];
+        dbPrefix: string;
+        isolationStrategy: string;
+        sessionId?: string | undefined;
+    }, {
+        tenantId: string;
+        id: string;
+        email: string;
+        name: string;
+        surname: string;
+        role: string;
+        permissions: string[];
+        dbPrefix: string;
+        isolationStrategy: string;
+        sessionId?: string | undefined;
+    }>>;
+    tenantInfo: z.ZodOptional<z.ZodObject<{
+        tenantId: z.ZodString;
+        active: z.ZodBoolean;
+        allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    }, "strip", z.ZodAny, z.objectOutputType<{
+        tenantId: z.ZodString;
+        active: z.ZodBoolean;
+        allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    }, z.ZodAny, "strip">, z.objectInputType<{
+        tenantId: z.ZodString;
+        active: z.ZodBoolean;
+        allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    }, z.ZodAny, "strip">>>;
+}, "strip", z.ZodTypeAny, {
+    authenticated: boolean;
+    user?: {
+        tenantId: string;
+        id: string;
+        email: string;
+        name: string;
+        surname: string;
+        role: string;
+        permissions: string[];
+        dbPrefix: string;
+        isolationStrategy: string;
+        sessionId?: string | undefined;
+    } | undefined;
+    tenantInfo?: z.objectOutputType<{
+        tenantId: z.ZodString;
+        active: z.ZodBoolean;
+        allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    }, z.ZodAny, "strip"> | undefined;
+}, {
+    authenticated: boolean;
+    user?: {
+        tenantId: string;
+        id: string;
+        email: string;
+        name: string;
+        surname: string;
+        role: string;
+        permissions: string[];
+        dbPrefix: string;
+        isolationStrategy: string;
+        sessionId?: string | undefined;
+    } | undefined;
+    tenantInfo?: z.objectInputType<{
+        tenantId: z.ZodString;
+        active: z.ZodBoolean;
+        allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        branding: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    }, z.ZodAny, "strip"> | undefined;
+}>;
+declare const SessionVerifySchema: z.ZodObject<{
+    active: z.ZodBoolean;
+}, "strip", z.ZodTypeAny, {
+    active: boolean;
+}, {
+    active: boolean;
+}>;
+declare const TokenResponseSchema: z.ZodObject<{
+    token: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    token: string;
+}, {
+    token: string;
+}>;
+declare const VerifiedTokenPayloadSchema: z.ZodObject<{
+    sub: z.ZodOptional<z.ZodString>;
+    email: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    surname: z.ZodOptional<z.ZodString>;
+    role: z.ZodString;
+    tenantId: z.ZodString;
+    permissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    dbPrefix: z.ZodOptional<z.ZodString>;
+    isolationStrategy: z.ZodOptional<z.ZodString>;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    sessionId: z.ZodOptional<z.ZodString>;
+    iat: z.ZodOptional<z.ZodNumber>;
+    exp: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodAny, z.objectOutputType<{
+    sub: z.ZodOptional<z.ZodString>;
+    email: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    surname: z.ZodOptional<z.ZodString>;
+    role: z.ZodString;
+    tenantId: z.ZodString;
+    permissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    dbPrefix: z.ZodOptional<z.ZodString>;
+    isolationStrategy: z.ZodOptional<z.ZodString>;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    sessionId: z.ZodOptional<z.ZodString>;
+    iat: z.ZodOptional<z.ZodNumber>;
+    exp: z.ZodOptional<z.ZodNumber>;
+}, z.ZodAny, "strip">, z.objectInputType<{
+    sub: z.ZodOptional<z.ZodString>;
+    email: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    surname: z.ZodOptional<z.ZodString>;
+    role: z.ZodString;
+    tenantId: z.ZodString;
+    permissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    dbPrefix: z.ZodOptional<z.ZodString>;
+    isolationStrategy: z.ZodOptional<z.ZodString>;
+    allowedApps: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    sessionId: z.ZodOptional<z.ZodString>;
+    iat: z.ZodOptional<z.ZodNumber>;
+    exp: z.ZodOptional<z.ZodNumber>;
+}, z.ZodAny, "strip">>;
 
 interface BrandingStylesProps {
     authProviderUrl?: string;
@@ -63,4 +237,4 @@ declare function BrandingStyles({ authProviderUrl, revalidateSeconds }: Branding
  */
 declare function createAuthRouteHandler(options: IndustrialAuthOptions): (request: NextRequest) => Promise<NextResponse<unknown>>;
 
-export { BrandingStyles, FederatedSession, IndustrialAuthOptions, UserProfile, createAuthRouteHandler, ensureIndustrialAccess, getIndustrialSession, getTenantSubdomain, verifyToken, withIndustrialAuth };
+export { BrandingStyles, FederatedSession, FederatedSessionSchema, IndustrialAuthOptions, InsufficientPrivilegesError, SessionVerifySchema, TenantInfoSchema, TokenResponseSchema, UnauthorizedAccessError, UserProfile, VerifiedTokenPayloadSchema, createAuthRouteHandler, ensureIndustrialAccess, getIndustrialSession, getTenantSubdomain, verifyToken, withIndustrialAuth };

@@ -1,7 +1,8 @@
 import { headers } from 'next/headers';
-import { generateTenantCss } from '@abd/styles/dist/engine/css-generator.js';
+import { generateTenantCss } from '@abd/styles';
 import { getTenantSubdomain } from '../utils/subdomain';
-import type { TenantInfo } from '../types';
+import type { TenantInfo, NextFetchRequestInit } from '../types';
+import { TenantInfoSchema } from '../utils/schemas.js';
 
 interface BrandingStylesProps {
   authProviderUrl?: string;
@@ -28,13 +29,14 @@ export async function BrandingStyles({
 
     const res = await fetch(verifyTenantUrl, {
       next: { revalidate: revalidateSeconds }
-    } as RequestInit & { next?: { revalidate: number } });
+    } as NextFetchRequestInit);
 
     if (!res.ok) {
       return null;
     }
 
-    const data = await res.json() as TenantInfo;
+    const rawData = await res.json();
+    const data = TenantInfoSchema.parse(rawData) as TenantInfo;
     const branding = data.branding;
 
     const customCss = branding?.theme ? generateTenantCss(branding.theme) : null;
@@ -58,7 +60,9 @@ export async function BrandingStyles({
       </>
     );
   } catch (err) {
-    console.error('[SDK_BRANDING_STYLES_ERROR] Failed to inject dynamic styling', err);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[SDK_BRANDING_STYLES_ERROR] Failed to inject dynamic styling', err);
+    }
   }
 
   return null;

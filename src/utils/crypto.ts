@@ -1,4 +1,5 @@
 import { jwtVerify, type JWTPayload } from 'jose';
+import { VerifiedTokenPayloadSchema } from './schemas.js';
 
 export interface VerifiedTokenPayload extends JWTPayload {
   sub: string;
@@ -15,7 +16,8 @@ export interface VerifiedTokenPayload extends JWTPayload {
 }
 
 function getSecretKey(customSecret?: string): Uint8Array {
-  const secret = customSecret || process.env.AUTH_JWT_SECRET || 'abd-auth-industrial-fallback-secret-2026';
+  const secret = customSecret || process.env.AUTH_JWT_SECRET;
+  if (!secret) throw new Error('[SDK] AUTH_JWT_SECRET is required');
   return new TextEncoder().encode(secret);
 }
 
@@ -26,7 +28,7 @@ function getSecretKey(customSecret?: string): Uint8Array {
 export async function verifyToken(token: string, customSecret?: string): Promise<VerifiedTokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey(customSecret));
-    return payload as VerifiedTokenPayload;
+    return VerifiedTokenPayloadSchema.parse(payload) as VerifiedTokenPayload;
   } catch (err) {
     console.error("[SDK_JWT_VERIFY_ERROR] Failed to verify token:", err instanceof Error ? err.message : err);
     return null;

@@ -1,4 +1,7 @@
 "use client";
+import {
+  FederatedSessionSchema
+} from "./chunk-3LUM5OPQ.mjs";
 
 // src/client/useSession.tsx
 import { createContext, useContext, useState, useEffect } from "react";
@@ -6,7 +9,9 @@ import { jsx } from "react/jsx-runtime";
 var SessionContext = createContext(void 0);
 var SessionProvider = ({
   children,
-  initialSession
+  initialSession,
+  refetchOnWindowFocus = true,
+  pollInterval = 0
 }) => {
   const [session, setSession] = useState(
     initialSession || { authenticated: false }
@@ -14,12 +19,13 @@ var SessionProvider = ({
   const [status, setStatus] = useState(
     initialSession ? initialSession.authenticated ? "authenticated" : "unauthenticated" : "loading"
   );
-  const fetchSession = async () => {
+  const fetchSession = async (quiet = false) => {
     try {
-      setStatus("loading");
+      if (!quiet) setStatus("loading");
       const res = await fetch("/api/auth/session", { cache: "no-store" });
       if (res.ok) {
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = FederatedSessionSchema.parse(rawData);
         setSession(data);
         setStatus(data.authenticated ? "authenticated" : "unauthenticated");
       } else {
@@ -37,6 +43,30 @@ var SessionProvider = ({
       fetchSession();
     }
   }, [initialSession]);
+  useEffect(() => {
+    if (!refetchOnWindowFocus) return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchSession(true);
+      }
+    };
+    const handleFocus = () => {
+      fetchSession(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refetchOnWindowFocus]);
+  useEffect(() => {
+    if (pollInterval <= 0) return;
+    const interval = setInterval(() => {
+      fetchSession(true);
+    }, pollInterval);
+    return () => clearInterval(interval);
+  }, [pollInterval]);
   return /* @__PURE__ */ jsx(SessionContext.Provider, { value: { session, status, update: fetchSession }, children });
 };
 function useSession() {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from './utils/crypto';
 import { getTenantSubdomain } from './utils/subdomain';
-import type { IndustrialAuthOptions, TenantInfo } from './types';
+import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './types';
+import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 
 /**
  * 🏢 Fetch tenant info from the Central Identity Provider.
@@ -11,16 +12,25 @@ async function resolveTenant(subdomain: string, providerUrl: string): Promise<Te
     const url = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
     const res = await fetch(url, {
       next: { revalidate: 60 }
-    } as RequestInit & { next?: { revalidate: number } });
+    } as NextFetchRequestInit);
 
     if (res.ok) {
-      return await res.json() as TenantInfo;
+      const data = await res.json();
+      return TenantInfoSchema.parse(data) as TenantInfo;
     }
   } catch (err) {
-    console.error('[SDK_TENANT_RESOLVE_ERROR]', err);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[SDK_TENANT_RESOLVE_ERROR] Failed to resolve tenant', err);
+    }
   }
   return null;
 }
+
+const debugLog = (msg: string) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(msg);
+  }
+};
 
 /**
  * 🛡️ Session Expiry Desync Check.
@@ -28,6 +38,7 @@ async function resolveTenant(subdomain: string, providerUrl: string): Promise<Te
 async function verifySessionExpiry(
   email: string,
   sessionId: string,
+  tokenIat: number,
   requestUrl: string,
   providerUrl: string,
   clientSecret: string
@@ -46,18 +57,25 @@ async function verifySessionExpiry(
         'Content-Type': 'application/json'
       },
       next: { revalidate: 0 }
-    } as RequestInit & { next?: { revalidate: number } });
+    } as NextFetchRequestInit);
 
     if (response.ok) {
-      const data = await response.json() as { active: boolean };
-      return !!data.active;
+      const data = await response.json();
+      const parsed = SessionVerifySchema.parse(data);
+      return parsed.active;
     } else {
-      console.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Falling back to local session.`);
-      return true;
+      const isWithin24h = (Date.now() / 1000) - tokenIat < 86400;
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Fallback (24h rule): ${isWithin24h}`);
+      }
+      return isWithin24h;
     }
   } catch (err) {
-    console.error('[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Falling back to local session.', err);
-    return true; // Fail-open resilience
+    const isWithin24h = (Date.now() / 1000) - tokenIat < 86400;
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Fallback (24h rule):', isWithin24h);
+    }
+    return isWithin24h;
   }
 }
 
@@ -87,7 +105,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
 
-    console.log(`[SDK_PROXY] [${options.appId}] Intercepted request path: ${pathname}`);
+    // Request intercepted
 
     // 2. Resolve Tenant from Subdomain
     const host = request.headers.get('host');
@@ -100,7 +118,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       // Redirect if tenant is inactive
       if (!tenantInfo || !tenantInfo.active) {
         const baseAppUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-        console.warn(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
         return NextResponse.redirect(new URL(`${baseAppUrl}/logout-success?error=tenant_not_found`));
       }
     }
@@ -128,7 +146,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
 
     // 4. Validate session JWT
     const sessionCookie = request.cookies.get(cookieName);
-    console.log(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? 'PRESENT' : 'MISSING'}`);
+    debugLog(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? 'PRESENT' : 'MISSING'}`);
     let isAuthenticated = false;
     let isAppNotAllowed = false;
     let didVerifyThisRequest = false;
@@ -136,41 +154,43 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     let userRole = '';
     let userTenantId = '';
     let userSessionId = '';
+    let userTokenIat = 0;
 
     if (sessionCookie?.value) {
-      console.log(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + '...' : 'undefined'}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + '...' : 'undefined'}`);
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
       if (payload) {
-        console.log(`[SDK_PROXY] [${options.appId}] Token verified. user: ${payload.email}, tenant: ${payload.tenantId}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Token verified for tenant: ${payload.tenantId}`);
         isAuthenticated = true;
         userEmail = payload.email;
         userRole = payload.role;
         userTenantId = payload.tenantId;
         userSessionId = payload.sessionId || '';
+        userTokenIat = payload.iat || Math.floor(Date.now() / 1000);
 
         // Verify if user is licensed for this application
         if (payload.allowedApps && userRole !== 'SUPER_ADMIN') {
           if (!payload.allowedApps.includes(options.appId)) {
-            console.warn(`[SDK_AUTH_BLOCKED] User allowedApps does not include '${options.appId}'`);
+            debugLog(`[SDK_AUTH_BLOCKED] User allowedApps does not include '${options.appId}'`);
             isAuthenticated = false;
             isAppNotAllowed = true;
           }
         }
       } else {
-        console.warn(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
       }
     }
 
     // 5. Cross-Tenant Security Check
     if (isAuthenticated && tenantInfo && userTenantId !== tenantInfo.tenantId) {
-      console.warn(`[SDK_CROSS_TENANT_SECURITY_BLOCKED] User tenant '${userTenantId}' does not match host tenant '${tenantInfo.tenantId}'`);
+      debugLog(`[SDK_CROSS_TENANT_SECURITY_BLOCKED] User tenant '${userTenantId}' does not match host tenant '${tenantInfo.tenantId}'`);
       isAuthenticated = false;
     }
 
     // 6. Tenant-level allowedApps Licensing Check
     if (isAuthenticated && tenantInfo && tenantInfo.allowedApps && userRole !== 'SUPER_ADMIN') {
       if (!tenantInfo.allowedApps.includes(options.appId)) {
-        console.warn(`[SDK_TENANT_BLOCKED] Tenant '${tenantInfo.tenantId}' allowedApps does not include '${options.appId}'`);
+        debugLog(`[SDK_TENANT_BLOCKED] Tenant '${tenantInfo.tenantId}' allowedApps does not include '${options.appId}'`);
         isAuthenticated = false;
         isAppNotAllowed = true;
       }
@@ -179,16 +199,16 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     // 7. Session Expiry Desync Check
     if (isAuthenticated && sessionCookie && userEmail) {
       const verifiedCookie = request.cookies.get(verifiedCookieName);
-      console.log(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? 'PRESENT' : 'MISSING'}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? 'PRESENT' : 'MISSING'}`);
 
       if (!verifiedCookie) {
-        console.log(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry for: ${userEmail}`);
-        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, request.url, providerUrl, clientSecret);
-        console.log(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry.`);
+        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, userTokenIat, request.url, providerUrl, clientSecret);
+        debugLog(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
         if (isSessionActive) {
           didVerifyThisRequest = true;
         } else {
-          console.warn(`[SDK_SESSION_EXPIRED] User session is inactive at central IdP`);
+          debugLog(`[SDK_SESSION_EXPIRED] User session is inactive at central IdP`);
           isAuthenticated = false;
         }
       }
@@ -196,7 +216,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
 
     // 8. Bypass for public paths when not authenticated
     if (isPublic && !isAuthenticated) {
-      console.log(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
 
@@ -218,7 +238,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
         authorizeUrl.searchParams.set('tenant', tenantInfo.tenantId);
       }
 
-      console.log(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to: ${authorizeUrl.toString()}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to IdP.`);
       const response = NextResponse.redirect(authorizeUrl);
 
       // Clean up local cookies to break redirection loops

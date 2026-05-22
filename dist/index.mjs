@@ -1,13 +1,22 @@
+import {
+  FederatedSessionSchema,
+  SessionVerifySchema,
+  TenantInfoSchema,
+  TokenResponseSchema,
+  VerifiedTokenPayloadSchema
+} from "./chunk-3LUM5OPQ.mjs";
+
 // src/utils/crypto.ts
 import { jwtVerify } from "jose";
 function getSecretKey(customSecret) {
-  const secret = customSecret || process.env.AUTH_JWT_SECRET || "abd-auth-industrial-fallback-secret-2026";
+  const secret = customSecret || process.env.AUTH_JWT_SECRET;
+  if (!secret) throw new Error("[SDK] AUTH_JWT_SECRET is required");
   return new TextEncoder().encode(secret);
 }
 async function verifyToken(token, customSecret) {
   try {
     const { payload } = await jwtVerify(token, getSecretKey(customSecret));
-    return payload;
+    return VerifiedTokenPayloadSchema.parse(payload);
   } catch (err) {
     console.error("[SDK_JWT_VERIFY_ERROR] Failed to verify token:", err instanceof Error ? err.message : err);
     return null;
@@ -15,13 +24,21 @@ async function verifyToken(token, customSecret) {
 }
 
 // src/utils/subdomain.ts
-function getTenantSubdomain(host) {
+function getTenantSubdomain(host, rootDomain) {
   if (!host) return null;
   const hostname = host.split(":")[0].toLowerCase();
   if (hostname === "abd-tenant-gobernance.vercel.app" || hostname === "localhost" || hostname === "127.0.0.1") {
     return null;
   }
   const parts = hostname.split(".");
+  const root = rootDomain || process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  if (root && hostname.endsWith(`.${root}`)) {
+    const prefix = hostname.slice(0, -(root.length + 1));
+    const parts2 = prefix.split(".");
+    const subdomain = parts2[0];
+    if (subdomain === "www") return null;
+    return subdomain;
+  }
   if (hostname.endsWith(".vercel.app")) {
     if (parts.length > 3) {
       return parts[0];
@@ -34,7 +51,9 @@ function getTenantSubdomain(host) {
     return subdomain;
   }
   if (parts.length === 2 && parts[1] === "localhost") {
-    return parts[0];
+    const subdomain = parts[0];
+    if (subdomain === "www") return null;
+    return subdomain;
   }
   return null;
 }
@@ -48,14 +67,22 @@ async function resolveTenant(subdomain, providerUrl) {
       next: { revalidate: 60 }
     });
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      return TenantInfoSchema.parse(data);
     }
   } catch (err) {
-    console.error("[SDK_TENANT_RESOLVE_ERROR]", err);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[SDK_TENANT_RESOLVE_ERROR] Failed to resolve tenant", err);
+    }
   }
   return null;
 }
-async function verifySessionExpiry(email, sessionId, requestUrl, providerUrl, clientSecret) {
+var debugLog = (msg) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(msg);
+  }
+};
+async function verifySessionExpiry(email, sessionId, tokenIat, requestUrl, providerUrl, clientSecret) {
   try {
     const verifyUrl = new URL(`${providerUrl}/api/auth/session/verify`, requestUrl);
     verifyUrl.searchParams.set("email", email);
@@ -72,14 +99,21 @@ async function verifySessionExpiry(email, sessionId, requestUrl, providerUrl, cl
     });
     if (response.ok) {
       const data = await response.json();
-      return !!data.active;
+      const parsed = SessionVerifySchema.parse(data);
+      return parsed.active;
     } else {
-      console.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Falling back to local session.`);
-      return true;
+      const isWithin24h = Date.now() / 1e3 - tokenIat < 86400;
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Fallback (24h rule): ${isWithin24h}`);
+      }
+      return isWithin24h;
     }
   } catch (err) {
-    console.error("[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Falling back to local session.", err);
-    return true;
+    const isWithin24h = Date.now() / 1e3 - tokenIat < 86400;
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Fallback (24h rule):", isWithin24h);
+    }
+    return isWithin24h;
   }
 }
 function withIndustrialAuth(options) {
@@ -95,7 +129,6 @@ function withIndustrialAuth(options) {
     if (isAsset) {
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
-    console.log(`[SDK_PROXY] [${options.appId}] Intercepted request path: ${pathname}`);
     const host = request.headers.get("host");
     const subdomain = getTenantSubdomain(host);
     let tenantInfo = null;
@@ -103,7 +136,7 @@ function withIndustrialAuth(options) {
       tenantInfo = await resolveTenant(subdomain, providerUrl);
       if (!tenantInfo || !tenantInfo.active) {
         const baseAppUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-        console.warn(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
         return NextResponse.redirect(new URL(`${baseAppUrl}/logout-success?error=tenant_not_found`));
       }
     }
@@ -124,7 +157,7 @@ function withIndustrialAuth(options) {
       return normalizedPath === normalizedParam || normalizedPath.startsWith(normalizedParam + "/");
     });
     const sessionCookie = request.cookies.get(cookieName);
-    console.log(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? "PRESENT" : "MISSING"}`);
+    debugLog(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? "PRESENT" : "MISSING"}`);
     let isAuthenticated = false;
     let isAppNotAllowed = false;
     let didVerifyThisRequest = false;
@@ -132,55 +165,57 @@ function withIndustrialAuth(options) {
     let userRole = "";
     let userTenantId = "";
     let userSessionId = "";
+    let userTokenIat = 0;
     if (sessionCookie?.value) {
-      console.log(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + "..." : "undefined"}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + "..." : "undefined"}`);
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
       if (payload) {
-        console.log(`[SDK_PROXY] [${options.appId}] Token verified. user: ${payload.email}, tenant: ${payload.tenantId}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Token verified for tenant: ${payload.tenantId}`);
         isAuthenticated = true;
         userEmail = payload.email;
         userRole = payload.role;
         userTenantId = payload.tenantId;
         userSessionId = payload.sessionId || "";
+        userTokenIat = payload.iat || Math.floor(Date.now() / 1e3);
         if (payload.allowedApps && userRole !== "SUPER_ADMIN") {
           if (!payload.allowedApps.includes(options.appId)) {
-            console.warn(`[SDK_AUTH_BLOCKED] User allowedApps does not include '${options.appId}'`);
+            debugLog(`[SDK_AUTH_BLOCKED] User allowedApps does not include '${options.appId}'`);
             isAuthenticated = false;
             isAppNotAllowed = true;
           }
         }
       } else {
-        console.warn(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
       }
     }
     if (isAuthenticated && tenantInfo && userTenantId !== tenantInfo.tenantId) {
-      console.warn(`[SDK_CROSS_TENANT_SECURITY_BLOCKED] User tenant '${userTenantId}' does not match host tenant '${tenantInfo.tenantId}'`);
+      debugLog(`[SDK_CROSS_TENANT_SECURITY_BLOCKED] User tenant '${userTenantId}' does not match host tenant '${tenantInfo.tenantId}'`);
       isAuthenticated = false;
     }
     if (isAuthenticated && tenantInfo && tenantInfo.allowedApps && userRole !== "SUPER_ADMIN") {
       if (!tenantInfo.allowedApps.includes(options.appId)) {
-        console.warn(`[SDK_TENANT_BLOCKED] Tenant '${tenantInfo.tenantId}' allowedApps does not include '${options.appId}'`);
+        debugLog(`[SDK_TENANT_BLOCKED] Tenant '${tenantInfo.tenantId}' allowedApps does not include '${options.appId}'`);
         isAuthenticated = false;
         isAppNotAllowed = true;
       }
     }
     if (isAuthenticated && sessionCookie && userEmail) {
       const verifiedCookie = request.cookies.get(verifiedCookieName);
-      console.log(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? "PRESENT" : "MISSING"}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? "PRESENT" : "MISSING"}`);
       if (!verifiedCookie) {
-        console.log(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry for: ${userEmail}`);
-        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, request.url, providerUrl, clientSecret);
-        console.log(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry.`);
+        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, userTokenIat, request.url, providerUrl, clientSecret);
+        debugLog(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
         if (isSessionActive) {
           didVerifyThisRequest = true;
         } else {
-          console.warn(`[SDK_SESSION_EXPIRED] User session is inactive at central IdP`);
+          debugLog(`[SDK_SESSION_EXPIRED] User session is inactive at central IdP`);
           isAuthenticated = false;
         }
       }
     }
     if (isPublic && !isAuthenticated) {
-      console.log(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     }
     if (!isAuthenticated) {
@@ -196,7 +231,7 @@ function withIndustrialAuth(options) {
       if (tenantInfo) {
         authorizeUrl.searchParams.set("tenant", tenantInfo.tenantId);
       }
-      console.log(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to: ${authorizeUrl.toString()}`);
+      debugLog(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to IdP.`);
       const response2 = NextResponse.redirect(authorizeUrl);
       response2.cookies.set(cookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
       response2.cookies.set(verifiedCookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
@@ -218,6 +253,18 @@ function withIndustrialAuth(options) {
 
 // src/session.ts
 import { cookies } from "next/headers";
+var UnauthorizedAccessError = class extends Error {
+  constructor(message = "UNAUTHORIZED_ECOSYSTEM_ACCESS") {
+    super(message);
+    this.name = "UnauthorizedAccessError";
+  }
+};
+var InsufficientPrivilegesError = class extends Error {
+  constructor(message = "INSUFFICIENT_INDUSTRIAL_PRIVILEGES") {
+    super(message);
+    this.name = "InsufficientPrivilegesError";
+  }
+};
 async function getIndustrialSession(customSecret) {
   try {
     const cookieStore = await cookies();
@@ -245,23 +292,26 @@ async function getIndustrialSession(customSecret) {
       }
     };
   } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[SDK_GET_SESSION_ERROR] Failed to retrieve industrial session:", error instanceof Error ? error.message : error);
+    }
     return { authenticated: false };
   }
 }
 async function ensureIndustrialAccess(requiredRole, customSecret) {
   const session = await getIndustrialSession(customSecret);
   if (!session.authenticated || !session.user) {
-    throw new Error("UNAUTHORIZED_ECOSYSTEM_ACCESS");
+    throw new UnauthorizedAccessError();
   }
   if (requiredRole && session.user.role !== requiredRole && session.user.role !== "SUPER_ADMIN") {
-    throw new Error("INSUFFICIENT_INDUSTRIAL_PRIVILEGES");
+    throw new InsufficientPrivilegesError();
   }
   return session.user;
 }
 
 // src/styles/BrandingStyles.tsx
 import { headers } from "next/headers";
-import { generateTenantCss } from "@abd/styles/dist/engine/css-generator.js";
+import { generateTenantCss } from "@abd/styles";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 async function BrandingStyles({
   authProviderUrl,
@@ -280,7 +330,8 @@ async function BrandingStyles({
     if (!res.ok) {
       return null;
     }
-    const data = await res.json();
+    const rawData = await res.json();
+    const data = TenantInfoSchema.parse(rawData);
     const branding = data.branding;
     const customCss = branding?.theme ? generateTenantCss(branding.theme) : null;
     const faviconUrl = branding?.favicon?.url || null;
@@ -298,7 +349,9 @@ async function BrandingStyles({
       faviconUrl && /* @__PURE__ */ jsx("link", { rel: "icon", href: faviconUrl })
     ] });
   } catch (err) {
-    console.error("[SDK_BRANDING_STYLES_ERROR] Failed to inject dynamic styling", err);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[SDK_BRANDING_STYLES_ERROR] Failed to inject dynamic styling", err);
+    }
   }
   return null;
 }
@@ -350,8 +403,8 @@ function createAuthRouteHandler(options) {
     if (pathname.endsWith("/federated/callback")) {
       const code = searchParams.get("code");
       const state = searchParams.get("state") || "/";
-      if (!code) {
-        return NextResponse2.json({ error: "No authorization code provided" }, { status: 400 });
+      if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
+        return NextResponse2.json({ error: "Invalid or missing authorization code" }, { status: 400 });
       }
       try {
         const tokenUrl = `${providerUrl}/api/auth/federated/token`;
@@ -371,7 +424,8 @@ function createAuthRouteHandler(options) {
           const errorData = await res.json();
           return NextResponse2.json({ error: "Token exchange failed", detail: errorData }, { status: 401 });
         }
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = TokenResponseSchema.parse(rawData);
         const redirectResponse = NextResponse2.redirect(new URL(state, request.url));
         redirectResponse.cookies.set(cookieName, data.token, {
           httpOnly: true,
@@ -392,6 +446,13 @@ function createAuthRouteHandler(options) {
 }
 export {
   BrandingStyles,
+  FederatedSessionSchema,
+  InsufficientPrivilegesError,
+  SessionVerifySchema,
+  TenantInfoSchema,
+  TokenResponseSchema,
+  UnauthorizedAccessError,
+  VerifiedTokenPayloadSchema,
   createAuthRouteHandler,
   ensureIndustrialAccess,
   getIndustrialSession,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndustrialSession } from './session';
 import type { IndustrialAuthOptions } from './types';
+import { TokenResponseSchema } from './utils/schemas.js';
 
 /**
  * 🛰️ Factory function that generates a Next.js App Router API Route Handler.
@@ -65,8 +66,8 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
       const code = searchParams.get('code');
       const state = searchParams.get('state') || '/';
 
-      if (!code) {
-        return NextResponse.json({ error: 'No authorization code provided' }, { status: 400 });
+      if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
+        return NextResponse.json({ error: 'Invalid or missing authorization code' }, { status: 400 });
       }
 
       try {
@@ -90,7 +91,8 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
           return NextResponse.json({ error: 'Token exchange failed', detail: errorData }, { status: 401 });
         }
 
-        const data = await res.json() as { token: string };
+        const rawData = await res.json();
+        const data = TokenResponseSchema.parse(rawData);
 
         const redirectResponse = NextResponse.redirect(new URL(state, request.url));
         redirectResponse.cookies.set(cookieName, data.token, {
