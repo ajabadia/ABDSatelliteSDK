@@ -237,4 +237,51 @@ declare function BrandingStyles({ authProviderUrl, revalidateSeconds }: Branding
  */
 declare function createAuthRouteHandler(options: IndustrialAuthOptions): (request: NextRequest) => Promise<NextResponse<unknown>>;
 
-export { BrandingStyles, FederatedSession, FederatedSessionSchema, IndustrialAuthOptions, InsufficientPrivilegesError, SessionVerifySchema, TenantInfoSchema, TokenResponseSchema, UnauthorizedAccessError, UserProfile, VerifiedTokenPayloadSchema, createAuthRouteHandler, ensureIndustrialAccess, getIndustrialSession, getTenantSubdomain, verifyToken, withIndustrialAuth };
+type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+interface LoggerConfig {
+    endpoint?: string;
+    token?: string;
+    appId?: string;
+    minLevel?: LogLevel;
+}
+interface LogMeta {
+    [key: string]: any;
+}
+interface AuditLogPayload {
+    tenantId: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    userId: string;
+    userEmail: string;
+    changedFields?: Record<string, any>;
+    previousState?: Record<string, any>;
+    ipAddress?: string;
+    userAgent?: string;
+    [key: string]: any;
+}
+/**
+ * ⚙️ Configures the global central logger options dynamically.
+ */
+declare function configureLogger(config: LoggerConfig): void;
+/**
+ * 🔒 Recursively traverses and redacts PII (Personal Identifiable Information) from variables, objects, and arrays.
+ */
+declare function redactPII<T>(val: T, keyName?: string): T;
+/**
+ * 🛰️ Central Structured Logger for the ABD Ecosystem.
+ * Guarantees automated PII redaction and fail-safe remote forensic log ingestion.
+ */
+declare const logger: {
+    debug(message: string, meta?: LogMeta): void;
+    info(message: string, meta?: LogMeta): void;
+    warn(message: string, meta?: LogMeta): void;
+    error(message: string, errorOrMessage: any, meta?: LogMeta): void;
+    /**
+     * 📡 Transmits a forensic audit log recursively redacted of PII (except for root userEmail)
+     * to the ABDLogs central microservice in a non-blocking (fire-and-forget) manner.
+     */
+    audit(payload: AuditLogPayload): void;
+};
+
+export { type AuditLogPayload, BrandingStyles, FederatedSession, FederatedSessionSchema, IndustrialAuthOptions, InsufficientPrivilegesError, type LogLevel, type LogMeta, type LoggerConfig, SessionVerifySchema, TenantInfoSchema, TokenResponseSchema, UnauthorizedAccessError, UserProfile, VerifiedTokenPayloadSchema, configureLogger, createAuthRouteHandler, ensureIndustrialAccess, getIndustrialSession, getTenantSubdomain, logger, redactPII, verifyToken, withIndustrialAuth };

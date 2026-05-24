@@ -19,3 +19,7 @@ export { BrandingStyles } from './styles/BrandingStyles';
 
 // API Dynamic Handler
 export { createAuthRouteHandler } from './routeHandler';
+
+// Logger
+export { configureLogger, logger, redactPII } from './utils/logger';
+export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './utils/logger';

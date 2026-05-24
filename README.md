@@ -130,5 +130,53 @@ export default async function RootLayout({
 
 ---
 
+## 📝 Structured Logging & PII Redaction
+
+The SDK includes a centralized structured logger designed for SOC2/GDPR compliance. It automatically logs in JSON format and redacts sensitive PII (Personal Identifiable Information) recursively before writing to standard streams or sending to the `ABDLogs` microservice.
+
+### Setup and Configuration
+
+```typescript
+import { configureLogger, logger } from '@abd/satellite-sdk';
+
+configureLogger({
+  endpoint: process.env.LOGS_SERVICE_URL, // Defaults to http://localhost:3600/api/logs
+  token: process.env.LOGS_SECRET_TOKEN,   // Microservice secret authorization token
+  appId: process.env.NEXT_PUBLIC_APP_ID || 'my-app',
+  minLevel: 'INFO',                       // DEBUG | INFO | WARN | ERROR
+});
+```
+
+### Log Methods
+
+```typescript
+// Operational structured logging
+logger.debug('Debugging local state', { rawQuery: 'SELECT *' });
+logger.info('User action performed', { userId: 'u_123', meta: { email: 'john@example.com' } }); // Email is redacted to [REDACTED_EMAIL]
+logger.warn('Rate limit threshold approached');
+logger.error('Database connection timeout', errorInstance);
+
+// Remote forensic/audit logging (propagates to ABDLogs)
+logger.audit({
+  tenantId: 'tenant-123',
+  action: 'UPDATE_USER',
+  entityType: 'USER',
+  entityId: 'u-456',
+  userId: 'u-admin',
+  userEmail: 'admin@company.com', // Keeps root identity intact
+  changedFields: {
+    phoneNumber: '555-1234',      // Redacted internally
+    name: 'New Name',
+  },
+  previousState: {
+    phoneNumber: '555-0000',      // Redacted internally
+    name: 'Old Name',
+  },
+});
+```
+
+---
+
 ## 🎨 Theme Injection Specs
 The SDK outputs the CSS variables compatible with Tailwind CSS v4 in real-time, resolving subdomain metadata and reading theme overrides. Colors are loaded seamlessly through HSL values mapped to `var(--primary)`, `var(--secondary)`, and `var(--background)`.
+

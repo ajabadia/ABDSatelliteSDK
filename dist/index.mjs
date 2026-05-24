@@ -444,6 +444,166 @@ function createAuthRouteHandler(options) {
     return NextResponse2.json({ error: "Route not found" }, { status: 404 });
   };
 }
+
+// src/utils/logger.ts
+var LEVEL_VALUES = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3
+};
+var globalConfig = {
+  endpoint: process.env.LOGS_SERVICE_URL || "http://localhost:3600/api/logs",
+  token: process.env.LOGS_SECRET_TOKEN,
+  appId: process.env.NEXT_PUBLIC_APP_ID || "satellite-app",
+  minLevel: process.env.LOG_LEVEL || "INFO"
+};
+function configureLogger(config) {
+  globalConfig = { ...globalConfig, ...config };
+}
+var SENSITIVE_KEYS = [
+  "password",
+  "token",
+  "secret",
+  "jwt",
+  "apikey",
+  "clientsecret",
+  "jwtsecret",
+  "creditcard",
+  "cvv",
+  "authorization",
+  "cookie",
+  "key",
+  "ssn",
+  "birthdate",
+  "phone",
+  "phonenumber",
+  "tel",
+  "pin",
+  "salt",
+  "hash",
+  "privatekey",
+  "passwd"
+];
+var EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+var CREDIT_CARD_REGEX = /\b(?:\d[ -]*?){13,16}\b/g;
+function redactPII(val, keyName) {
+  if (val === null || val === void 0) {
+    return val;
+  }
+  if (typeof val === "string") {
+    if (keyName && SENSITIVE_KEYS.some((k) => keyName.toLowerCase().includes(k))) {
+      return "[REDACTED]";
+    }
+    let cleaned = val;
+    cleaned = cleaned.replace(EMAIL_REGEX, "[REDACTED_EMAIL]");
+    cleaned = cleaned.replace(CREDIT_CARD_REGEX, "[REDACTED_CARD]");
+    return cleaned;
+  }
+  if (Array.isArray(val)) {
+    return val.map((item) => redactPII(item, keyName));
+  }
+  if (typeof val === "object") {
+    if (val instanceof Date || val instanceof RegExp) {
+      return val;
+    }
+    const copy = {};
+    const keys = Object.keys(val);
+    for (const k of keys) {
+      copy[k] = redactPII(val[k], k);
+    }
+    return copy;
+  }
+  if (keyName && SENSITIVE_KEYS.some((k) => keyName.toLowerCase().includes(k))) {
+    return "[REDACTED]";
+  }
+  return val;
+}
+function logToConsole(level, message, meta) {
+  const minConfigLevel = globalConfig.minLevel || "INFO";
+  if (LEVEL_VALUES[level] < LEVEL_VALUES[minConfigLevel]) {
+    return;
+  }
+  const logObject = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    level,
+    appId: globalConfig.appId,
+    message: redactPII(message),
+    meta: meta ? redactPII(meta) : void 0
+  };
+  const jsonString = JSON.stringify(logObject);
+  if (level === "ERROR") {
+    console.error(jsonString);
+  } else if (level === "WARN") {
+    console.warn(jsonString);
+  } else {
+    console.log(jsonString);
+  }
+}
+var logger = {
+  debug(message, meta) {
+    logToConsole("DEBUG", message, meta);
+  },
+  info(message, meta) {
+    logToConsole("INFO", message, meta);
+  },
+  warn(message, meta) {
+    logToConsole("WARN", message, meta);
+  },
+  error(message, errorOrMessage, meta) {
+    let msg = "";
+    let finalMeta = meta || {};
+    if (errorOrMessage instanceof Error) {
+      msg = errorOrMessage.message;
+      finalMeta = {
+        ...finalMeta,
+        stack: errorOrMessage.stack,
+        name: errorOrMessage.name
+      };
+    } else {
+      msg = String(errorOrMessage);
+    }
+    logToConsole("ERROR", msg, finalMeta);
+  },
+  /**
+   * 📡 Transmits a forensic audit log recursively redacted of PII (except for root userEmail)
+   * to the ABDLogs central microservice in a non-blocking (fire-and-forget) manner.
+   */
+  audit(payload) {
+    const { endpoint, token, appId } = globalConfig;
+    const redactedPayload = {
+      ...payload,
+      appId: appId || payload.appId || "unknown",
+      changedFields: payload.changedFields ? redactPII(payload.changedFields) : {},
+      previousState: payload.previousState ? redactPII(payload.previousState) : void 0
+    };
+    logToConsole("INFO", `[AUDIT_EVENT][${redactedPayload.action}] entityType=${redactedPayload.entityType} entityId=${redactedPayload.entityId}`, {
+      action: redactedPayload.action,
+      entityType: redactedPayload.entityType,
+      entityId: redactedPayload.entityId,
+      userId: redactedPayload.userId,
+      userEmail: redactedPayload.userEmail
+      // El correo raíz no se enmascara para preservar rastreo de identidad
+    });
+    if (!token && process.env.NODE_ENV === "production") {
+      console.error("[LOGGER_AUDIT_WARNING] Fail-safe active: LOGS_SECRET_TOKEN is missing in production environment variables.");
+      return;
+    }
+    fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token || "dev-bypass-token"}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ...redactedPayload,
+        createdAt: /* @__PURE__ */ new Date()
+      })
+    }).catch((err) => {
+      console.error(`[LOGGER_AUDIT_ERROR][${appId}] Fail-safe fallback active. Failed to transmit forensic log to central service:`, err instanceof Error ? err.message : err);
+    });
+  }
+};
 export {
   BrandingStyles,
   FederatedSessionSchema,
@@ -453,10 +613,13 @@ export {
   TokenResponseSchema,
   UnauthorizedAccessError,
   VerifiedTokenPayloadSchema,
+  configureLogger,
   createAuthRouteHandler,
   ensureIndustrialAccess,
   getIndustrialSession,
   getTenantSubdomain,
+  logger,
+  redactPII,
   verifyToken,
   withIndustrialAuth
 };
