@@ -70,3 +70,17 @@ export interface IndustrialAuthOptions {
   verifiedCookieName?: string;
   intlMiddleware?: (request: NextRequest) => Promise<NextResponse> | NextResponse;
 }
+
+/**
+ * 🔁 Result type for fetchWithRetry utility.
+ */
+export interface FetchRetryResult<T> {
+  /** Whether the fetch succeeded (2xx status) */
+  ok: boolean;
+  /** Parsed JSON response data (only if ok is true) */
+  data?: T;
+  /** HTTP status code (if response was received) */
+  status?: number;
+  /** Error message string (if all retries failed) */
+  error?: string;
+}

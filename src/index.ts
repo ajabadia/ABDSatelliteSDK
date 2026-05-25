@@ -1,12 +1,13 @@
 // Types
 export * from './types';
+export type { FetchRetryResult } from './types';
 
 // Cryptographic and subdomain helpers
 export { verifyToken } from './utils/crypto';
 export { getTenantSubdomain } from './utils/subdomain';
 
 // Proxy Guard
-export { withIndustrialAuth } from './proxy';
+export { withIndustrialAuth, fetchWithRetry } from './proxy';
 
 // Server-side session helpers
 export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';

@@ -8,14 +8,29 @@ import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 /**
  * 🔁 Fetch with exponential backoff retry logic.
  * Retries on network errors and 5xx server errors with jitter to prevent thundering herd.
+ * 
+ * @param url - The URL to fetch
+ * @param options - Fetch options (supports Next.js fetch options like `next.revalidate`)
+ * @param maxAttempts - Maximum number of attempts (default: 4)
+ * @param baseDelayMs - Base delay in milliseconds for exponential backoff (default: 100)
+ * @param maxDelayMs - Maximum delay cap in milliseconds (default: 5000)
+ * @returns Promise resolving to FetchRetryResult with ok, data, status, and error fields
+ * 
+ * @example
+ * ```typescript
+ * const result = await fetchWithRetry<User>('/api/user', { next: { revalidate: 60 } });
+ * if (result.ok && result.data) {
+ *   console.log('User:', result.data);
+ * }
+ * ```
  */
-async function fetchWithRetry<T>(
+export async function fetchWithRetry<T>(
   url: string,
   options: NextFetchRequestInit,
   maxAttempts: number = 4,
   baseDelayMs: number = 100,
   maxDelayMs: number = 5000
-): Promise<{ ok: boolean; data?: T; status?: number; error?: string }> {
+): Promise<FetchRetryResult<T>> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
