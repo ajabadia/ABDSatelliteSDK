@@ -1,8 +1,8 @@
-# 🔍 Auditoría Técnica — `@abd/satellite-sdk` v1.0.0 (v03)
+# 🔍 Auditoría Técnica — `@abd/satellite-sdk` v1.0.0 (v04)
 
 **Fecha:** 25 de Mayo de 2026
 **Rol:** SDK Centralizado para Satélites del Ecosistema ABD
-**Auditoría v03:** Codebuff AI — Mejoras alta prioridad (25/Mayo/2026)
+**Auditoría v04:** Codebuff AI — Retry logic con backoff exponencial (25/Mayo/2026)
 
 ---
 
@@ -106,8 +106,16 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 ### 4. 🟡 FederatedSessionSchema ahora más flexible
 **Actualizado en v03:** El schema ahora permite campos opcionales (`name`, `surname`, `dbPrefix`, `isolationStrategy`) y `permissions` tiene default `[]`. Esto evita rechazos de payloads JWT que no tengan todos los campos.
 
-### 5. 🟡 Sin retry logic en llamadas al IdP
-Las funciones `resolveTenant()` y `verifySessionExpiry()` no tienen reintentos. Si el IdP está lento o temporalmente no disponible, falla inmediatamente.
+### 5. ✅ Retry logic con backoff exponencial implementado
+**IMPLEMENTADO en v04:** Nueva función `fetchWithRetry()` con:
+- **4 intentos totales** por defecto (maxAttempts = 4)
+- **Backoff exponencial con jitter**: delay = baseDelay * 2^attempt + random(0, baseDelay/2)
+- **Cap de delay máximo**: 5000ms para evitar esperas excesivas
+- **Base delay**: 100ms
+- Reintenta en errores de red y errores 5xx del servidor
+- **No reintenta** en errores 4xx del cliente (no tenían éxito nunca)
+- Integrado en `resolveTenant()` y `verifySessionExpiry()`
+- Logs estructurados para cada retry y fallo final
 
 ---
 
@@ -118,8 +126,9 @@ Las funciones `resolveTenant()` y `verifySessionExpiry()` no tienen reintentos. 
 | `jose` | ^6.2.3 | = |
 | `zod` | ^3.23.8 | = |
 | `tsup` | ^8.0.0 | = |
-| `vitest` | ^1.6.0 | = |
-| `@vitest/coverage-v8` | ^1.6.0 | = |
+| `vitest` | ^4.1.7 | 🆕 |
+| `@vitest/coverage-v8` | ^4.1.7 | 🆕 |
+| `vite` | ^6.0.0 | 🆕 (peer dep de Vitest 4.x) |
 
 ---
 
@@ -132,6 +141,7 @@ Las funciones `resolveTenant()` y `verifySessionExpiry()` no tienen reintentos. 
 - ✅ Fallback de sesión con ventana de 24h
 - ✅ **Logger estructurado integrado** (PII redaction)
 - ✅ Validación de payloads en `getIndustrialSession()`
+- ✅ **Retry logic con backoff exponencial** para llamadas al IdP
 
 **Calificación general:** ✅ PROD-READY — SDK de autenticación federada estable y seguro.
 
@@ -143,4 +153,5 @@ Las funciones `resolveTenant()` y `verifySessionExpiry()` no tienen reintentos. 
 |---|---|---|
 | v01 | Inicial | Hallazgo inicial de 14 issues |
 | v02 | 25/Mayo/2026 | Corrección de 12 issues, 42 tests añadidos |
-| v03 | 25/Mayo/2026 | Integración logger, validación FederatedSession, 48 tests |
+| v03 | 25/Mayo/2026 | Integración logger, validación FederatedSession, 48 tests, Vitest unificado |
+| v04 | 25/Mayo/2026 | Retry logic con backoff exponencial y jitter en resolveTenant y verifySessionExpiry |

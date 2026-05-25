@@ -6,18 +6,70 @@ import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './
 import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 
 /**
+ * 🔁 Fetch with exponential backoff retry logic.
+ * Retries on network errors and 5xx server errors with jitter to prevent thundering herd.
+ */
+async function fetchWithRetry<T>(
+  url: string,
+  options: NextFetchRequestInit,
+  maxAttempts: number = 4,
+  baseDelayMs: number = 100,
+  maxDelayMs: number = 5000
+): Promise<{ ok: boolean; data?: T; status?: number; error?: string }> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, options);
+
+      // Don't retry 4xx errors (client errors) - they won't succeed on retry
+      if (!res.ok && res.status >= 500) {
+        lastError = new Error(`Server error: ${res.status}`);
+        if (attempt < maxAttempts - 1) {
+          // Exponential backoff with jitter: delay = baseDelay * 2^attempt + random(0, baseDelay/2)
+          const backoffDelay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+          const jitter = Math.random() * baseDelayMs * 0.5;
+          const delay = Math.floor(backoffDelay + jitter);
+          logger.warn(`[SDK_RETRY] Attempt ${attempt + 1} failed with ${res.status}. Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        // Last attempt failed - log before returning
+        logger.error(`[SDK_RETRY] Final attempt (${attempt + 1}/${maxAttempts}) failed with ${res.status}:`, lastError);
+        return { ok: false, status: res.status, error: lastError.message };
+      }
+
+      // For 2xx or 4xx, return as-is (4xx are handled by caller)
+      const data = res.ok ? await res.json().catch(() => null) : null;
+      return { ok: res.ok, data, status: res.status };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxAttempts - 1) {
+        const backoffDelay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+        const jitter = Math.random() * baseDelayMs * 0.5;
+        const delay = Math.floor(backoffDelay + jitter);
+        logger.warn(`[SDK_RETRY] Attempt ${attempt + 1} failed with error: ${lastError.message}. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  logger.error(`[SDK_RETRY] All ${maxAttempts} attempts failed. Last error:`, lastError);
+  return { ok: false, error: lastError?.message };
+}
+
+/**
  * 🏢 Fetch tenant info from the Central Identity Provider.
  */
 async function resolveTenant(subdomain: string, providerUrl: string): Promise<TenantInfo | null> {
   try {
     const url = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
-    const res = await fetch(url, {
+    const result = await fetchWithRetry<TenantInfo>(url, {
       next: { revalidate: 60 }
-    } as NextFetchRequestInit);
+    } as NextFetchRequestInit, 3, 100);
 
-    if (res.ok) {
-      const data = await res.json();
-      return TenantInfoSchema.parse(data) as TenantInfo;
+    if (result.ok && result.data) {
+      return TenantInfoSchema.parse(result.data) as TenantInfo;
     }
   } catch (err) {
     logger.error('[SDK_TENANT_RESOLVE_ERROR] Failed to resolve tenant', err);
@@ -49,22 +101,22 @@ async function verifySessionExpiry(
       verifyUrl.searchParams.set('sessionId', sessionId);
     }
 
-    const response = await fetch(verifyUrl.toString(), {
+    const result = await fetchWithRetry<{ active: boolean }>(verifyUrl.toString(), {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${clientSecret}`,
         'Content-Type': 'application/json'
       },
       next: { revalidate: 0 }
-    } as NextFetchRequestInit);
+    } as NextFetchRequestInit, 3, 100);
 
-    if (response.ok) {
-      const data = await response.json();
-      const parsed = SessionVerifySchema.parse(data);
+    if (result.ok && result.data) {
+      const parsed = SessionVerifySchema.parse(result.data);
       return parsed.active;
     } else {
       const isWithin24h = (Date.now() / 1000) - tokenIat < 86400;
-      logger.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Fallback (24h rule): ${isWithin24h}`);
+      const status = result.status || 0;
+      logger.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${status}. Fallback (24h rule): ${isWithin24h}`);
       return isWithin24h;
     }
   } catch (err) {
