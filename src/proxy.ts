@@ -4,6 +4,7 @@ import { getTenantSubdomain } from './utils/subdomain';
 import { logger } from './utils/logger';
 import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './types';
 import { idpRateLimiter } from './utils/rateLimiter';
+import { idpCircuitBreaker } from './utils/circuitBreaker';
 import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 
 /**
@@ -33,6 +34,17 @@ export async function fetchWithRetry<T>(
   maxDelayMs: number = 5000
 ): Promise<FetchRetryResult<T>> {
   let lastError: Error | null = null;
+  let circuitRecorded = false; // Only record one failure/success per request
+
+  // Check circuit breaker before making any requests
+  if (!idpCircuitBreaker.canExecute()) {
+    const waitTime = idpCircuitBreaker.getTimeUntilRetry();
+    logger.warn(`[SDK_CIRCUIT_BREAKER] Circuit is OPEN. Request blocked. Retry in ${waitTime}ms.`);
+    return { 
+      ok: false, 
+      error: `Circuit breaker is open. IdP unavailable. Retry in ${Math.ceil(waitTime / 1000)}s.` 
+    };
+  }
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -61,10 +73,20 @@ export async function fetchWithRetry<T>(
         }
         // Last attempt failed - log before returning
         logger.error(`[SDK_RETRY] Final attempt (${attempt + 1}/${maxAttempts}) failed with ${res.status}:`, lastError);
+        // Record failure only once per request
+        if (!circuitRecorded) {
+          idpCircuitBreaker.recordFailure();
+          circuitRecorded = true;
+        }
         return { ok: false, status: res.status, error: lastError.message };
       }
 
       // For 2xx or 4xx, return as-is (4xx are handled by caller)
+      // Record success on 2xx responses (only once per request)
+      if (res.ok && !circuitRecorded) {
+        idpCircuitBreaker.recordSuccess();
+        circuitRecorded = true;
+      }
       const data = res.ok ? await res.json().catch(() => null) : null;
       return { ok: res.ok, data, status: res.status };
     } catch (err) {
@@ -79,6 +101,12 @@ export async function fetchWithRetry<T>(
     }
   }
 
+  // Record failure only once per request if not already recorded
+  if (!circuitRecorded) {
+    idpCircuitBreaker.recordFailure();
+    circuitRecorded = true;
+  }
+  
   logger.error(`[SDK_RETRY] All ${maxAttempts} attempts failed. Last error:`, lastError);
   return { ok: false, error: lastError?.message };
 }

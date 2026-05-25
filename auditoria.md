@@ -1,8 +1,8 @@
-# 🔍 Auditoría Técnica — `@abd/satellite-sdk` v1.0.0 (v04)
+# 🔍 Auditoría Técnica — `@abd/satellite-sdk` v1.0.0 (v07)
 
 **Fecha:** 25 de Mayo de 2026
 **Rol:** SDK Centralizado para Satélites del Ecosistema ABD
-**Auditoría v04:** Codebuff AI — Retry logic con backoff exponencial (25/Mayo/2026)
+**Auditoría v07:** Codebuff AI — Circuit Breaker pattern (25/Mayo/2026)
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|---|
 | Archivos fuente | 11 | = |
 | Líneas de código | ~560 | ➕ (+10 por logger) |
-| Tests (Vitest) | 95 | 🆕 (71 → 95) |
+| Tests (Vitest) | 112 | 🆕 (95 → 112) |
 | `console.log` en producción | 0 | ✅ Integración logger completa |
 | Logger estructurado integrado | ✅ | 🆕 (antes solo en módulo) |
 | Validación Zod en getSession | ✅ | 🆕 (nuevo) |
@@ -132,6 +132,22 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 - Integrado en `resolveTenant()` y `verifySessionExpiry()`
 - Logs estructurados para cada retry y fallo final
 
+### 7. ✅ Circuit Breaker pattern para llamadas IdP
+**IMPLEMENTADO en v07:** Nuevo módulo `src/utils/circuitBreaker.ts` con:
+- **Estados**: CLOSED (normal), OPEN (fail-fast), HALF_OPEN (testing recovery)
+- **Transiciones**:
+  - CLOSED → OPEN: después de 5 fallos consecutivos (configurable)
+  - OPEN → HALF_OPEN: después de 30s timeout (configurable)
+  - HALF_OPEN → CLOSED: después de 3 éxitos consecutivos (configurable)
+  - HALF_OPEN → OPEN: cualquier fallo en estado half-open
+- **`idpCircuitBreaker`**: Instancia global para todas las llamadas IdP
+- **`canExecute()`**: Check no-blocking - retorna false si circuit OPEN
+- **Fail-fast en OPEN**: `fetchWithRetry` retorna error inmediatamente sin hacer fetch al IdP
+- **`circuitRecorded` flag**: Asegura solo un failure/success por request (no por retry attempt)
+- Exportado desde `index.ts` para uso externo
+- Integrado en `fetchWithRetry()` - todas las llamadas IdP pasan por circuit breaker
+- Logs estructurados para cada transición de estado y fallo rápido
+
 ---
 
 ## 📈 Stack Tecnológico Actualizado
@@ -172,3 +188,4 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 | v04 | 25/Mayo/2026 | Retry logic con backoff exponencial y jitter en resolveTenant y verifySessionExpiry, fetchWithRetry exportado |
 | v05 | 25/Mayo/2026 | Tests unitarios para fetchWithRetry (23 tests nuevos, total 71 tests) |
 | v06 | 25/Mayo/2026 | Rate limiting con token bucket para llamadas IdP (24 tests nuevos, total 95 tests) |
+| v07 | 25/Mayo/2026 | Circuit breaker pattern para prevenir cascading failures (25 tests nuevos, total 112 tests) |

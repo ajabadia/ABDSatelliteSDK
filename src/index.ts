@@ -28,3 +28,7 @@ export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './utils/l
 // Rate Limiter
 export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
 export type { RateLimiterOptions } from './utils/rateLimiter';
+
+// Circuit Breaker
+export { CircuitBreaker, idpCircuitBreaker, createCircuitBreaker, CircuitState } from './utils/circuitBreaker';
+export type { CircuitBreakerOptions, CircuitBreakerStatus } from './utils/circuitBreaker';
