@@ -8,7 +8,7 @@ export interface LoggerConfig {
 }
 
 export interface LogMeta {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuditLogPayload {
@@ -18,11 +18,11 @@ export interface AuditLogPayload {
   entityId: string;
   userId: string;
   userEmail: string;
-  changedFields?: Record<string, any>;
-  previousState?: Record<string, any>;
+  changedFields?: Record<string, unknown>;
+  previousState?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const LEVEL_VALUES: Record<LogLevel, number> = {
@@ -110,10 +110,10 @@ export function redactPII<T>(val: T, keyName?: string): T {
       return val;
     }
     
-    const copy: Record<string, any> = {};
-    const keys = Object.keys(val);
+    const copy: Record<string, unknown> = {};
+    const keys = Object.keys(val as object);
     for (const k of keys) {
-      copy[k] = redactPII((val as Record<string, any>)[k], k);
+      copy[k] = redactPII((val as Record<string, unknown>)[k], k);
     }
     return copy as unknown as T;
   }
@@ -171,7 +171,7 @@ export const logger = {
     logToConsole('WARN', message, meta);
   },
 
-  error(message: string, errorOrMessage: any, meta?: LogMeta): void {
+  error(message: string, errorOrMessage: unknown, meta?: LogMeta): void {
     let msg = '';
     let finalMeta = meta || {};
 

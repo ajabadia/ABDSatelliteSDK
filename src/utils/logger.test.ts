@@ -46,9 +46,9 @@ describe('Centralized Logger - PII Redaction', () => {
 });
 
 describe('Centralized Logger - Console Output and Levels', () => {
-  let logSpy: any;
-  let warnSpy: any;
-  let errorSpy: any;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -89,8 +89,8 @@ describe('Centralized Logger - Console Output and Levels', () => {
 });
 
 describe('Centralized Logger - Audit Transmission', () => {
-  let fetchMock: any;
-  let logSpy: any;
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fetchMock = vi.fn().mockImplementation(() => Promise.resolve({ ok: true }));

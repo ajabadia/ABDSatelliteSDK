@@ -36,7 +36,8 @@ describe('routeHandler.ts', () => {
   describe('Session Status (/session)', () => {
     it('should return the current session as JSON', async () => {
       const mockSession = { authenticated: true, user: { id: 'u1' } };
-      vi.mocked(getIndustrialSession).mockResolvedValue(mockSession as any);
+      // @ts-ignore - mock resolved value type
+  vi.mocked(getIndustrialSession).mockResolvedValue(mockSession);
 
       const req = new NextRequest('http://localhost/api/auth/session');
       const res = await handler(req);

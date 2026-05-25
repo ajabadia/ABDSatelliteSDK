@@ -235,7 +235,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
       
       const mockSessionVerify = { active: true };
 
-      const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+      // @ts-ignore - fetch mock typing
+const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: RequestInfo) => {
         if (url.toString().includes('tenant/info')) {
           return new Response(JSON.stringify(mockTenantInfo), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }

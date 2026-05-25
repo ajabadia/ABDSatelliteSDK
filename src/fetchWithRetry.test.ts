@@ -261,7 +261,8 @@ describe('fetchWithRetry', () => {
       });
 
       // Capture delays by mocking setTimeout
-      const setTimeoutSpy = vi.spyOn(global, 'setTimeout').mockImplementation((fn: any) => {
+      // @ts-ignore - mock implementation typing
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout').mockImplementation((fn: (...args: unknown[]) => void) => {
         return originalSetTimeout(fn, 0);
       });
 
