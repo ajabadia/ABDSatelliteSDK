@@ -14,6 +14,7 @@
     "dev": "tsup --watch",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "full-audit": "powershell -File ./scripts/abd-audit.ps1"
   },
   "dependencies": {
@@ -37,7 +38,8 @@
     "react-dom": "19.2.4",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0"
   },
   "exports": {
     ".": {
