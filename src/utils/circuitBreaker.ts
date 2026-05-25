@@ -126,7 +126,7 @@ export class CircuitBreaker {
         this.failureCount++;
         if (this.failureCount >= this.failureThreshold) {
           this.state = CircuitState.OPEN;
-          logger.error(`[SDK_CIRCUIT_BREAKER] [${this.name}] Circuit OPENED after ${this.failureCount} failures`);
+          logger.error(`[SDK_CIRCUIT_BREAKER] [${this.name}] Circuit OPENED after ${this.failureCount} failures`, new Error('Circuit opened'));
         }
         break;
 
@@ -267,6 +267,6 @@ export const idpCircuitBreaker = new CircuitBreaker({
 /**
  * Create a new circuit breaker with custom options
  */
-export function createCircuitBreaker(options: CircuitBreakerOptions): CircuitBreaker {
+export function createCircuitBreaker(options: CircuitBreakerOptions = {}): CircuitBreaker {
   return new CircuitBreaker(options);
 }

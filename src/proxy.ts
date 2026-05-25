@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from './utils/crypto';
 import { getTenantSubdomain } from './utils/subdomain';
 import { logger } from './utils/logger';
-import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './types';
+import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit, FetchRetryResult } from './types';
 import { idpRateLimiter } from './utils/rateLimiter';
 import { idpCircuitBreaker } from './utils/circuitBreaker';
 import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
@@ -28,7 +28,7 @@ import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
  */
 export async function fetchWithRetry<T>(
   url: string,
-  options: NextFetchRequestInit,
+  options: NextFetchRequestInit = {},
   maxAttempts: number = 4,
   baseDelayMs: number = 100,
   maxDelayMs: number = 5000
@@ -53,7 +53,7 @@ export async function fetchWithRetry<T>(
         await idpRateLimiter.waitForToken('idp');
       } catch (rateLimitErr) {
         const errMsg = rateLimitErr instanceof Error ? rateLimitErr.message : String(rateLimitErr);
-        logger.error(`[SDK_RATE_LIMIT] Request blocked: ${errMsg}`);
+        logger.error(`[SDK_RATE_LIMIT] Request blocked: ${errMsg}`, rateLimitErr);
         return { ok: false, error: `Rate limit exceeded: ${errMsg}` };
       }
       
@@ -72,7 +72,7 @@ export async function fetchWithRetry<T>(
           continue;
         }
         // Last attempt failed - log before returning
-        logger.error(`[SDK_RETRY] Final attempt (${attempt + 1}/${maxAttempts}) failed with ${res.status}:`, lastError);
+        logger.error(`[SDK_RETRY] Final attempt (${attempt + 1}/${maxAttempts}) failed with ${res.status}`, lastError);
         // Record failure only once per request
         if (!circuitRecorded) {
           idpCircuitBreaker.recordFailure();
@@ -107,7 +107,7 @@ export async function fetchWithRetry<T>(
     circuitRecorded = true;
   }
   
-  logger.error(`[SDK_RETRY] All ${maxAttempts} attempts failed. Last error:`, lastError);
+  logger.error(`[SDK_RETRY] All ${maxAttempts} attempts failed. Last error`, lastError);
   return { ok: false, error: lastError?.message };
 }
 

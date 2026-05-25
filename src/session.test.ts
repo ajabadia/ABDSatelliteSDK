@@ -23,8 +23,9 @@ vi.mock('./utils/crypto', () => {
   };
 });
 
-// Extract mock refs
+// @ts-ignore - mock exports from vi.mock
 import { mockGet, mockCookies } from 'next/headers';
+// @ts-ignore - mock exports from vi.mock
 import { mockVerifyToken } from './utils/crypto';
 
 describe('session.ts', () => {

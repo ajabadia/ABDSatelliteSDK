@@ -322,7 +322,8 @@ describe('fetchWithRetry', () => {
 
     it('should handle fetch with custom headers in options', async () => {
       let capturedHeaders: Headers | null = null;
-      vi.spyOn(global, 'fetch').mockImplementation(async (url: RequestInfo, init?: RequestInit) => {
+      // @ts-ignore - Vitest mock typing for fetch
+      vi.spyOn(global, 'fetch').mockImplementation(async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
         if (init?.headers) {
           capturedHeaders = new Headers(init.headers as HeadersInit);
         }
@@ -341,6 +342,7 @@ describe('fetchWithRetry', () => {
       });
 
       expect(result.ok).toBe(true);
+      // @ts-ignore - Headers type mismatch in test mock
       expect(capturedHeaders?.get('Authorization')).toBe('Bearer token123');
     });
 

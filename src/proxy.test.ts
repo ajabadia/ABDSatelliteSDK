@@ -19,7 +19,9 @@ vi.mock('./utils/subdomain', () => {
   };
 });
 
+// @ts-ignore - mock exports from vi.mock
 import { mockVerifyToken } from './utils/crypto';
+// @ts-ignore - mock exports from vi.mock
 import { mockGetTenantSubdomain } from './utils/subdomain';
 
 describe('proxy.ts (withIndustrialAuth)', () => {

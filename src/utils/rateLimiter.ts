@@ -86,11 +86,13 @@ export class RateLimiter {
     while (!this.tryAcquire(key)) {
       const elapsed = Date.now() - startTime;
       if (elapsed >= maxWaitMs) {
-        logger.error(`[SDK_RATE_LIMIT] Wait timeout after ${maxWaitMs}ms for key '${key}'`);
+        logger.error(`[SDK_RATE_LIMIT] Wait timeout after ${maxWaitMs}ms for key '${key}'`, new Error('Rate limit timeout'));
         throw new Error(`Rate limit wait timeout after ${maxWaitMs}ms for key '${key}'`);
       }
       const waitTime = Math.min(this.minDelayMs, maxWaitMs - elapsed);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, waitTime);
+      });
     }
   }
 
