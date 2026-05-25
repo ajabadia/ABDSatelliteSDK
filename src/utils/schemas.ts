@@ -12,13 +12,14 @@ export const FederatedSessionSchema = z.object({
   user: z.object({
     id: z.string(),
     email: z.string(),
-    name: z.string(),
-    surname: z.string(),
+    name: z.string().optional(),
+    surname: z.string().optional(),
     role: z.string(),
     tenantId: z.string(),
-    permissions: z.array(z.string()),
-    dbPrefix: z.string(),
-    isolationStrategy: z.string(),
+    permissions: z.array(z.string()).default([]),
+    dbPrefix: z.string().optional(),
+    isolationStrategy: z.string().optional(),
+    allowedApps: z.array(z.string()).optional(),
     sessionId: z.string().optional()
   }).optional(),
   tenantInfo: TenantInfoSchema.optional()

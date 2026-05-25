@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from './utils/crypto';
 import { getTenantSubdomain } from './utils/subdomain';
+import { logger } from './utils/logger';
 import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './types';
 import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 
@@ -19,16 +20,14 @@ async function resolveTenant(subdomain: string, providerUrl: string): Promise<Te
       return TenantInfoSchema.parse(data) as TenantInfo;
     }
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[SDK_TENANT_RESOLVE_ERROR] Failed to resolve tenant', err);
-    }
+    logger.error('[SDK_TENANT_RESOLVE_ERROR] Failed to resolve tenant', err);
   }
   return null;
 }
 
-const debugLog = (msg: string) => {
+const debugLog = (msg: string, meta?: Record<string, unknown>) => {
   if (process.env.NODE_ENV !== 'production') {
-    console.log(msg);
+    logger.debug(msg, meta);
   }
 };
 
@@ -65,16 +64,12 @@ async function verifySessionExpiry(
       return parsed.active;
     } else {
       const isWithin24h = (Date.now() / 1000) - tokenIat < 86400;
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Fallback (24h rule): ${isWithin24h}`);
-      }
+      logger.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${response.status}. Fallback (24h rule): ${isWithin24h}`);
       return isWithin24h;
     }
   } catch (err) {
     const isWithin24h = (Date.now() / 1000) - tokenIat < 86400;
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Fallback (24h rule):', isWithin24h);
-    }
+    logger.error('[SDK_SESSION_VERIFY_ERROR] Failed to contact Central IdP. Fallback (24h rule):', err);
     return isWithin24h;
   }
 }

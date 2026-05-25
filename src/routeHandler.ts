@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndustrialSession } from './session';
+import { logger } from './utils/logger';
 import type { IndustrialAuthOptions } from './types';
 import { TokenResponseSchema } from './utils/schemas.js';
 
@@ -105,7 +106,7 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
 
         return redirectResponse;
       } catch (err) {
-        console.error('[SDK_CALLBACK_EXCHANGE_ERROR]', err);
+        logger.error('[SDK_CALLBACK_EXCHANGE_ERROR] Token exchange failed', err);
         return NextResponse.json({ error: 'Internal server error during token exchange' }, { status: 500 });
       }
     }

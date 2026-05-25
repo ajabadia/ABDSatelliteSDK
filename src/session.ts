@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers';
 import { verifyToken } from './utils/crypto';
+import { FederatedSessionSchema } from './utils/schemas.js';
+import { logger } from './utils/logger';
 import type { FederatedSession } from './types';
 
 export class UnauthorizedAccessError extends Error {
@@ -34,7 +36,8 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
       return { authenticated: false };
     }
 
-    return {
+    // Validate the payload structure with Zod before returning
+    const parsedPayload = FederatedSessionSchema.safeParse({
       authenticated: true,
       user: {
         id: payload.sub,
@@ -47,8 +50,18 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
         isolationStrategy: payload.isolationStrategy,
         permissions: payload.permissions || [],
         allowedApps: payload.allowedApps || [],
+        sessionId: payload.sessionId,
+      },
+    });
+
+    if (!parsedPayload.success) {
+      if (process.env.NODE_ENV !== 'production') {
+        logger.error('[SDK_GET_SESSION_ERROR] Payload validation failed', parsedPayload.error);
       }
-    };
+      return { authenticated: false };
+    }
+
+    return parsedPayload.data;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('[SDK_GET_SESSION_ERROR] Failed to retrieve industrial session:', error instanceof Error ? error.message : error);
