@@ -24,3 +24,7 @@ export { createAuthRouteHandler } from './routeHandler';
 // Logger
 export { configureLogger, logger, redactPII } from './utils/logger';
 export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './utils/logger';
+
+// Rate Limiter
+export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
+export type { RateLimiterOptions } from './utils/rateLimiter';

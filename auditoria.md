@@ -12,7 +12,7 @@
 |---|---|---|
 | Archivos fuente | 11 | = |
 | Líneas de código | ~560 | ➕ (+10 por logger) |
-| Tests (Vitest) | 71 | 🆕 (48 → 71) |
+| Tests (Vitest) | 95 | 🆕 (71 → 95) |
 | `console.log` en producción | 0 | ✅ Integración logger completa |
 | Logger estructurado integrado | ✅ | 🆕 (antes solo en módulo) |
 | Validación Zod en getSession | ✅ | 🆕 (nuevo) |
@@ -81,6 +81,7 @@ Subdomain.ts usa `NextFetchRequestInit` en lugar de `RequestInit & { next?: ... 
 - `subdomain.test.ts` → 8 tests (extracción de subdominio)
 - `crypto.test.ts` → 6 tests (verificación JWT)
 - `fetchWithRetry.test.ts` → 23 tests (retry logic, backoff, errores de red/5xx, 4xx no-retry, edge cases)
+- `utils/rateLimiter.test.ts` → 24 tests (token bucket, refill, execute, reset, edge cases)
 
 ### ✅ Issue #13 — Falta sideEffects: false: CORREGIDO
 `package.json` ahora incluye `"sideEffects": false`.
@@ -117,6 +118,17 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 - **No reintenta** en errores 4xx del cliente (no tenían éxito nunca)
 - Función exportada para uso externo (`index.ts`)
 - Interfaz `FetchRetryResult<T>` documentada en types.ts
+
+### 6. ✅ Rate limiting para llamadas IdP
+**IMPLEMENTADO en v06:** Nuevo módulo `src/utils/rateLimiter.ts` con:
+- **Algoritmo Token Bucket**: 10 req/s sostenido, 20 burst máximo, 50ms delay mínimo
+- **`waitForToken()`**: Espera blocking con timeout configurable (default 5000ms) - lanza Error si se excede
+- **`tryAcquire()`**: Check non-blocking que retorna false inmediatamente si rate exceeded
+- **`execute()`**: Helper para ejecutar funciones con rate limiting
+- Configurable via environment variables: `SDK_RATE_LIMIT_RPS`, `SDK_RATE_LIMIT_BURST`, `SDK_RATE_LIMIT_MIN_DELAY`
+- Integrado en `fetchWithRetry()` - todo request al IdP pasa por rate limiting
+- Errores de rate limit retornados como `{ ok: false, error: 'Rate limit exceeded: ...' }` (no thrown)
+- Exportado desde `index.ts` para uso externo
 - Integrado en `resolveTenant()` y `verifySessionExpiry()`
 - Logs estructurados para cada retry y fallo final
 
@@ -159,3 +171,4 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 | v03 | 25/Mayo/2026 | Integración logger, validación FederatedSession, 48 tests, Vitest unificado |
 | v04 | 25/Mayo/2026 | Retry logic con backoff exponencial y jitter en resolveTenant y verifySessionExpiry, fetchWithRetry exportado |
 | v05 | 25/Mayo/2026 | Tests unitarios para fetchWithRetry (23 tests nuevos, total 71 tests) |
+| v06 | 25/Mayo/2026 | Rate limiting con token bucket para llamadas IdP (24 tests nuevos, total 95 tests) |

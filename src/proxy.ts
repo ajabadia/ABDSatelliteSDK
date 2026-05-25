@@ -3,6 +3,7 @@ import { verifyToken } from './utils/crypto';
 import { getTenantSubdomain } from './utils/subdomain';
 import { logger } from './utils/logger';
 import type { IndustrialAuthOptions, TenantInfo, NextFetchRequestInit } from './types';
+import { idpRateLimiter } from './utils/rateLimiter';
 import { TenantInfoSchema, SessionVerifySchema } from './utils/schemas.js';
 
 /**
@@ -35,6 +36,15 @@ export async function fetchWithRetry<T>(
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
+      // Apply rate limiting before each request (throws on timeout)
+      try {
+        await idpRateLimiter.waitForToken('idp');
+      } catch (rateLimitErr) {
+        const errMsg = rateLimitErr instanceof Error ? rateLimitErr.message : String(rateLimitErr);
+        logger.error(`[SDK_RATE_LIMIT] Request blocked: ${errMsg}`);
+        return { ok: false, error: `Rate limit exceeded: ${errMsg}` };
+      }
+      
       const res = await fetch(url, options);
 
       // Don't retry 4xx errors (client errors) - they won't succeed on retry
