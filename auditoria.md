@@ -12,7 +12,7 @@
 |---|---|---|
 | Archivos fuente | 11 | = |
 | Líneas de código | ~560 | ➕ (+10 por logger) |
-| Tests (Vitest) | 48 | 🆕 (42 → 48) |
+| Tests (Vitest) | 71 | 🆕 (48 → 71) |
 | `console.log` en producción | 0 | ✅ Integración logger completa |
 | Logger estructurado integrado | ✅ | 🆕 (antes solo en módulo) |
 | Validación Zod en getSession | ✅ | 🆕 (nuevo) |
@@ -80,6 +80,7 @@ Subdomain.ts usa `NextFetchRequestInit` en lugar de `RequestInit & { next?: ... 
 - `proxy.test.ts` → 10 tests (auth bypass, tenant resolution, licensing)
 - `subdomain.test.ts` → 8 tests (extracción de subdominio)
 - `crypto.test.ts` → 6 tests (verificación JWT)
+- `fetchWithRetry.test.ts` → 23 tests (retry logic, backoff, errores de red/5xx, 4xx no-retry, edge cases)
 
 ### ✅ Issue #13 — Falta sideEffects: false: CORREGIDO
 `package.json` ahora incluye `"sideEffects": false`.
@@ -114,6 +115,8 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 - **Base delay**: 100ms
 - Reintenta en errores de red y errores 5xx del servidor
 - **No reintenta** en errores 4xx del cliente (no tenían éxito nunca)
+- Función exportada para uso externo (`index.ts`)
+- Interfaz `FetchRetryResult<T>` documentada en types.ts
 - Integrado en `resolveTenant()` y `verifySessionExpiry()`
 - Logs estructurados para cada retry y fallo final
 
@@ -154,4 +157,5 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 | v01 | Inicial | Hallazgo inicial de 14 issues |
 | v02 | 25/Mayo/2026 | Corrección de 12 issues, 42 tests añadidos |
 | v03 | 25/Mayo/2026 | Integración logger, validación FederatedSession, 48 tests, Vitest unificado |
-| v04 | 25/Mayo/2026 | Retry logic con backoff exponencial y jitter en resolveTenant y verifySessionExpiry |
+| v04 | 25/Mayo/2026 | Retry logic con backoff exponencial y jitter en resolveTenant y verifySessionExpiry, fetchWithRetry exportado |
+| v05 | 25/Mayo/2026 | Tests unitarios para fetchWithRetry (23 tests nuevos, total 71 tests) |
