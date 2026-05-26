@@ -37,24 +37,21 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
     }
 
     // Validate the payload structure with Zod before returning
-    // Note: name and surname are optional in the schema to handle cases where JWT doesn't include them
-    // We ensure they are strings (not undefined) by using fallback empty strings
-    const userName = payload.name ?? '';
-    const userSurname = payload.surname ?? '';
+    // Schema applies defaults via .default() (string, array, enum), so parsed result matches FederatedSession type
     const parsedPayload = FederatedSessionSchema.safeParse({
       authenticated: true,
       user: {
-        id: payload.sub as string,
-        email: payload.email as string,
-        name: userName,
-        surname: userSurname,
-        role: payload.role as string,
-        tenantId: payload.tenantId as string,
-        dbPrefix: (payload.dbPrefix || '') as string,
-        isolationStrategy: (payload.isolationStrategy || 'DATABASE_PER_TENANT') as string,
-        permissions: (payload.permissions || []) as string[],
-        allowedApps: (payload.allowedApps || []) as string[],
-        sessionId: payload.sessionId as string | undefined,
+        id: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        surname: payload.surname,
+        role: payload.role,
+        tenantId: payload.tenantId,
+        dbPrefix: payload.dbPrefix,
+        isolationStrategy: payload.isolationStrategy,
+        permissions: payload.permissions,
+        allowedApps: payload.allowedApps,
+        sessionId: payload.sessionId,
       },
     });
 
@@ -65,8 +62,8 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
       return { authenticated: false };
     }
 
-    // Cast to FederatedSession to satisfy TypeScript - name/surname are guaranteed non-empty via our fallbacks
-    return parsedPayload.data as FederatedSession;
+    // Return validated data - schema guarantees correct types with defaults
+    return parsedPayload.data;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('[SDK_GET_SESSION_ERROR] Failed to retrieve industrial session:', error instanceof Error ? error.message : error);

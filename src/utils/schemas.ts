@@ -3,8 +3,11 @@ import { z } from 'zod';
 export const TenantInfoSchema = z.object({
   tenantId: z.string(),
   active: z.boolean(),
+  name: z.string(),
+  dbPrefix: z.string(),
+  isolationStrategy: z.string(),
   allowedApps: z.array(z.string()).optional(),
-  branding: z.record(z.any()).optional()
+  branding: z.record(z.string(), z.any()).nullable().optional()
 }).catchall(z.any());
 
 export const FederatedSessionSchema = z.object({
@@ -12,13 +15,13 @@ export const FederatedSessionSchema = z.object({
   user: z.object({
     id: z.string(),
     email: z.string(),
-    name: z.string().optional(),
-    surname: z.string().optional(),
+    name: z.string().default(''),
+    surname: z.string().default(''),
     role: z.string(),
     tenantId: z.string(),
     permissions: z.array(z.string()).default([]),
-    dbPrefix: z.string().optional(),
-    isolationStrategy: z.string().optional(),
+    dbPrefix: z.string().default(''),
+    isolationStrategy: z.string().default('DATABASE_PER_TENANT'),
     allowedApps: z.array(z.string()).optional(),
     sessionId: z.string().optional()
   }).optional(),

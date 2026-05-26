@@ -90,7 +90,7 @@ describe('session.ts', () => {
       });
     });
 
-    it('should handle optional / missing claims with default values', async () => {
+    it('should handle optional / missing claims with schema defaults', async () => {
       const mockMinimalPayload = {
         sub: 'user-123',
         email: 'test@abd.com',
@@ -106,9 +106,9 @@ describe('session.ts', () => {
       expect(session.user).toEqual(
         expect.objectContaining({
           permissions: [],
-          allowedApps: [],
         })
       );
+      expect(session.user?.allowedApps).toBeUndefined();
     });
 
     it('should handle thrown errors gracefully and return authenticated: false', async () => {

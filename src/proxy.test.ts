@@ -84,6 +84,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
         tenantId: 'inactive-tenant',
         name: 'Inactive',
         active: false, // Inactive!
+        dbPrefix: 'inactive',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'],
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       
@@ -105,6 +107,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
         tenantId: 't1',
         name: 'Tenant 1',
         active: true,
+        dbPrefix: 't1',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'],
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       vi.spyOn(global, 'fetch').mockResolvedValue(mockFetchResponse);
@@ -124,6 +128,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
         tenantId: 't1',
         name: 'Tenant 1',
         active: true,
+        dbPrefix: 't1',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'],
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       vi.spyOn(global, 'fetch').mockResolvedValue(mockFetchResponse);
@@ -154,6 +160,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
         tenantId: 't1',
         name: 'Tenant 1',
         active: true,
+        dbPrefix: 't1',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'], // Tenant has 'quiz' app licensed
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       vi.spyOn(global, 'fetch').mockResolvedValue(mockTenantResponse);
@@ -230,6 +238,8 @@ describe('proxy.ts (withIndustrialAuth)', () => {
         tenantId: 't1',
         name: 'Tenant 1',
         active: true,
+        dbPrefix: 't1',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'],
       };
       
@@ -265,6 +275,8 @@ const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: Reques
         tenantId: 't1',
         name: 'Tenant 1',
         active: true,
+        dbPrefix: 't1',
+        isolationStrategy: 'DATABASE_PER_TENANT',
         allowedApps: ['quiz'],
       };
       

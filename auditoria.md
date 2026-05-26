@@ -148,6 +148,17 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 - Integrado en `fetchWithRetry()` - todas las llamadas IdP pasan por circuit breaker
 - Logs estructurados para cada transición de estado y fallo rápido
 
+### 8. ✅ Fallbacks redundantes `??` eliminados en session.ts
+**CORREGIDO en v08:** En `src/session.ts` se eliminaron 6 fallbacks redundantes que duplicaban los defaults definidos en `FederatedSessionSchema`:
+- `name: payload.name ?? ''` → `payload.name` (schema: `z.string().default('')`)
+- `surname: payload.surname ?? ''` → `payload.surname` (schema: `z.string().default('')`)
+- `dbPrefix: payload.dbPrefix ?? ''` → `payload.dbPrefix` (schema: `z.string().default('')`)
+- `isolationStrategy: payload.isolationStrategy ?? 'DATABASE_PER_TENANT'` → `payload.isolationStrategy` (schema: `z.string().default('DATABASE_PER_TENANT')`)
+- `permissions: payload.permissions ?? []` → `payload.permissions` (schema: `z.array(z.string()).default([])`)
+- `allowedApps: payload.allowedApps ?? []` → `payload.allowedApps` (schema: `z.array(z.string()).optional()` — cambio de comportamiento: ahora `undefined` en lugar de `[]` cuando falta)
+
+Comentario actualizado para reflejar que los defaults aplican a múltiples tipos (string, array, enum). 112/112 tests pasan.
+
 ---
 
 ## 📈 Stack Tecnológico Actualizado
@@ -189,3 +200,4 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 | v05 | 25/Mayo/2026 | Tests unitarios para fetchWithRetry (23 tests nuevos, total 71 tests) |
 | v06 | 25/Mayo/2026 | Rate limiting con token bucket para llamadas IdP (24 tests nuevos, total 95 tests) |
 | v07 | 25/Mayo/2026 | Circuit breaker pattern para prevenir cascading failures (25 tests nuevos, total 112 tests) |
+| v08 | 25/Mayo/2026 | Eliminación de fallbacks redundantes `??` en session.ts, actualización de comentario |

@@ -1,12 +1,72 @@
-﻿ABD SYSTEM AUDIT REPORT - 05/20/2026 08:42:04
+﻿ABD SYSTEM AUDIT REPORT - 05/25/2026 15:29:33
+
+[MEDIUM:FIRE:LARGE_FILE] src\fetchWithRetry.test.ts:1
+Message: WARNING: File is long (398 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+    2 | import { fetchWithRetry } from './proxy';
+    3 | 
+
+[MEDIUM:FIRE:LARGE_FILE] src\proxy.test.ts:1
+Message: WARNING: File is long (286 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+    2 | import { NextRequest, NextResponse } from 'next/server';
+    3 | import { withIndustrialAuth } from './proxy';
 
 [MEDIUM:FIRE:LARGE_FILE] src\proxy.ts:1
-Message: WARNING: File is long (215 lines).
+Message: WARNING: File is long (368 lines).
 >   1 | import { NextRequest, NextResponse } from 'next/server';
     2 | import { verifyToken } from './utils/crypto';
     3 | import { getTenantSubdomain } from './utils/subdomain';
 
-[PHASE:SUCCESS] [1/4 Structural Audit]: Passed successfully with 0 errors and 1 warnings.
+[MEDIUM:FIRE:LARGE_FILE] src\routeHandler.test.ts:1
+Message: WARNING: File is long (178 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+    2 | import { NextRequest, NextResponse } from 'next/server';
+    3 | import { createAuthRouteHandler } from './routeHandler';
+
+[MEDIUM:FIRE:LARGE_FILE] src\session.test.ts:1
+Message: WARNING: File is long (182 lines).
+>   1 | import { describe, it, expect, vi, beforeEach } from 'vitest';
+    2 | import { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
+    3 | 
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\circuitBreaker.test.ts:1
+Message: WARNING: File is long (249 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+    2 | import { CircuitBreaker, CircuitState, createCircuitBreaker } from './circuitBreaker';
+    3 | 
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\circuitBreaker.ts:1
+Message: WARNING: File is long (272 lines).
+>   1 | import { logger } from './logger';
+    2 | 
+    3 | /**
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\logger.test.ts:1
+Message: WARNING: File is long (165 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+    2 | import { logger, redactPII, configureLogger } from './logger';
+    3 | 
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\logger.ts:1
+Message: WARNING: File is long (238 lines).
+>   1 | export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+    2 | 
+    3 | export interface LoggerConfig {
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\rateLimiter.test.ts:1
+Message: WARNING: File is long (334 lines).
+>   1 | import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+    2 | import { RateLimiter, createRateLimiter } from './rateLimiter';
+    3 | 
+
+[MEDIUM:FIRE:LARGE_FILE] src\utils\rateLimiter.ts:1
+Message: WARNING: File is long (178 lines).
+>   1 | import { logger } from './logger';
+    2 | 
+    3 | /**
+
+[PHASE:SUCCESS] [1/4 Structural Audit]: Passed successfully with 0 errors and 11 warnings.
 
 [PHASE:SUCCESS] [2/4 Purity & Types  ]: Passed successfully with 0 errors and 0 warnings.
 
