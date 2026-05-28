@@ -1,9 +1,11 @@
-import { b as NextFetchRequestInit, a as FetchRetryResult, I as IndustrialAuthOptions, U as UserProfile, F as FederatedSession } from './types-CwdvEh2z.mjs';
-export { N as NextFetchRequestConfig, T as TenantBranding, c as TenantBrandingTheme, d as TenantInfo } from './types-CwdvEh2z.mjs';
+import { b as NextFetchRequestInit, a as FetchRetryResult, I as IndustrialAuthOptions, U as UserProfile, F as FederatedSession, T as TenantBranding } from './types-DXegacV1.mjs';
+export { N as NextFetchRequestConfig, Q as QuizEntityType, c as QuizEntityTypeValue, d as QuizEventAction, e as QuizEventActionType, f as TenantBrandingTheme, g as TenantInfo } from './types-DXegacV1.mjs';
 import { JWTPayload } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import * as react_jsx_runtime from 'react/jsx-runtime';
+import { AsyncLocalStorage } from 'async_hooks';
+import mongoose, { Connection, Schema, Model } from 'mongoose';
 
 interface VerifiedTokenPayload extends JWTPayload {
     sub: string;
@@ -169,29 +171,51 @@ interface AuditLogPayload {
     userAgent?: string;
     [key: string]: unknown;
 }
-/**
- * ⚙️ Configures the global central logger options dynamically.
- */
-declare function configureLogger(config: LoggerConfig): void;
-/**
- * 🔒 Recursively traverses and redacts PII (Personal Identifiable Information) from variables, objects, and arrays.
- */
+type ConnectionStatus = 'unknown' | 'connected' | 'disconnected';
+type ConnectionSubscriber = (status: ConnectionStatus) => void;
+/** 🔒 Recursively redacts PII from values */
 declare function redactPII<T>(val: T, keyName?: string): T;
-/**
- * 🛰️ Central Structured Logger for the ABD Ecosystem.
- * Guarantees automated PII redaction and fail-safe remote forensic log ingestion.
- */
 declare const logger: {
     debug(message: string, meta?: LogMeta): void;
     info(message: string, meta?: LogMeta): void;
     warn(message: string, meta?: LogMeta): void;
     error(message: string, errorOrMessage: unknown, meta?: LogMeta): void;
     /**
-     * 📡 Transmits a forensic audit log recursively redacted of PII (except for root userEmail)
-     * to the ABDLogs central microservice in a non-blocking (fire-and-forget) manner.
+     * 📡 Envía un log de auditoría a ABDLogs con buffering offline automático.
+     * - Si el envío falla y estamos en cliente → buffer en localStorage
+     * - Antes de enviar → intenta vaciar el buffer pendiente
+     * - Server-side: solo log de warning si falla (sin localStorage)
+     * - Fail-safe: nunca lanza excepciones
      */
-    audit(payload: AuditLogPayload): void;
+    audit(payload: AuditLogPayload): Promise<void>;
+    /**
+     * 🔌 Pings ABDLogs health endpoint para verificar conectividad.
+     * Timeout after 5 seconds.
+     */
+    checkConnection(): Promise<{
+        connected: boolean;
+        latency: number;
+        error?: string;
+    }>;
+    /** Returns current connection status */
+    getConnectionStatus(): ConnectionStatus;
+    /** Subscribe to connection changes. Returns unsubscribe function. */
+    onConnectionChange(callback: ConnectionSubscriber): () => void;
+    /** Returns number of entries in the offline buffer */
+    getBufferSize(): number;
+    /** Attempts to flush buffered logs */
+    flushBuffer(): Promise<{
+        flushed: number;
+        failed: number;
+        dropped: number;
+    }>;
+    /** Clears all buffered entries */
+    clearBuffer(): void;
+    /** @internal Reset for testing */
+    _resetForTest(): void;
 };
+/** ⚙️ Configures the global logger options dynamically. */
+declare function configureLogger(config: LoggerConfig): void;
 
 /**
  * 🚦 Token Bucket Rate Limiter for SDK IdP calls.
@@ -283,6 +307,89 @@ declare const idpRateLimiter: RateLimiter;
  * Create a new rate limiter with custom options
  */
 declare function createRateLimiter(options: RateLimiterOptions): RateLimiter;
+
+/**
+ * Contextual information about the active tenant during request processing.
+ */
+interface TenantContext {
+    tenantId: string;
+    dbPrefix: string;
+    isolationStrategy: string;
+}
+/**
+ * AsyncLocalStorage instance to hold the current TenantContext per request/callback.
+ */
+declare const tenantStorage: AsyncLocalStorage<TenantContext>;
+
+/**
+ * Resolves the MongoDB URI for a specific tenant database.
+ */
+declare function resolveTenantUri(baseUri: string, dbName: string): string;
+/**
+ * Gets or creates a cached Mongoose Connection for a tenant.
+ * Incorporates LRU eviction when pool exceeds 15 connections.
+ */
+declare function getTenantConnection(dbPrefix: string, isolationStrategy: string): Connection;
+/**
+ * Awaits a Mongoose Connection to be ready (readyState === 1).
+ */
+declare function ensureConnectionReady(conn: Connection): Promise<Connection>;
+
+/**
+ * Runs the callback in the context of the active tenant.
+ *
+ * Resolves tenant identity in order of priority:
+ * 1. Already-active AsyncLocalStorage store
+ * 2. Explicitly provided context
+ * 3. Session from `getIndustrialSession()`
+ *
+ * When a tenant context is established, also ensures the Mongoose connection
+ * is ready before executing the callback (prevents race conditions in serverless).
+ */
+declare function withTenantContext<T>(callback: () => Promise<T>, explicitContext?: TenantContext): Promise<T>;
+/**
+ * Creates a Proxy over a Mongoose model that dynamically forwards operations
+ * to the tenant-specific model based on the active AsyncLocalStorage context.
+ */
+declare function getTenantModel<T>(modelName: string, schema: Schema<T>): Model<T>;
+
+/**
+ * Sube un recurso visual de marca blanca (logotipo o favicon) a Cloudinary
+ * con transformaciones de tamaño y optimización automáticas.
+ */
+declare function uploadBrandingAsset(buffer: Buffer, _filename: string, tenantId: string, assetType: 'logo' | 'favicon'): Promise<{
+    url: string;
+    publicId: string;
+    secureUrl: string;
+}>;
+/**
+ * Elimina un recurso visual del CDN de Cloudinary
+ */
+declare function deleteCloudinaryAsset(publicId: string): Promise<void>;
+
+/**
+ * 🔐 computeBlockHash
+ * Calcula el sello SHA-256 inmutable de un bloque en la cadena de auditoría forense.
+ * Utiliza serialización determinista para garantizar que el mismo objeto resulte
+ * en el mismo string JSON siempre.
+ *
+ * @param payload - Datos puros del log excluyendo metadatos de cadena (_id, hash, previousHash, __v)
+ * @param previousHash - Hash del bloque inmediatamente anterior
+ * @param timestamp - Timestamp en milisegundos de la creación del bloque (Date.now())
+ */
+declare function computeBlockHash(payload: Record<string, unknown>, previousHash: string, timestamp?: number): string;
+
+/**
+ * 🏢 Resuelve los datos de branding del tenant actual basado en el subdominio.
+ * Función servidora (RSC-safe) para usar en layouts de las apps satélite.
+ * Retorna null si no hay subdominio o si falla la resolución.
+ *
+ * ⚠️ Usa import dinámico de `next/headers` para no romper el bundle del SDK
+ * en entornos que no tienen Next.js (tests, etc.).
+ */
+declare function resolveTenantBranding(): Promise<TenantBranding | null>;
+
+declare function connectDB(serviceName?: string): Promise<typeof mongoose>;
 
 /**
  * 🔌 Circuit Breaker States
@@ -415,4 +522,4 @@ declare const idpCircuitBreaker: CircuitBreaker;
  */
 declare function createCircuitBreaker(options?: CircuitBreakerOptions): CircuitBreaker;
 
-export { type AuditLogPayload, BrandingStyles, CircuitBreaker, type CircuitBreakerOptions, type CircuitBreakerStatus, CircuitState, FederatedSession, FederatedSessionSchema, FetchRetryResult, IndustrialAuthOptions, InsufficientPrivilegesError, type LogLevel, type LogMeta, type LoggerConfig, NextFetchRequestInit, RateLimiter, type RateLimiterOptions, SessionVerifySchema, TenantInfoSchema, TokenResponseSchema, UnauthorizedAccessError, UserProfile, VerifiedTokenPayloadSchema, configureLogger, createAuthRouteHandler, createCircuitBreaker, createRateLimiter, ensureIndustrialAccess, fetchWithRetry, getIndustrialSession, getTenantSubdomain, idpCircuitBreaker, idpRateLimiter, logger, redactPII, verifyToken, withIndustrialAuth };
+export { type AuditLogPayload, BrandingStyles, CircuitBreaker, type CircuitBreakerOptions, type CircuitBreakerStatus, CircuitState, FederatedSession, FederatedSessionSchema, FetchRetryResult, IndustrialAuthOptions, InsufficientPrivilegesError, type LogLevel, type LogMeta, type LoggerConfig, NextFetchRequestInit, RateLimiter, type RateLimiterOptions, SessionVerifySchema, TenantBranding, type TenantContext, TenantInfoSchema, TokenResponseSchema, UnauthorizedAccessError, UserProfile, VerifiedTokenPayloadSchema, computeBlockHash, configureLogger, connectDB, createAuthRouteHandler, createCircuitBreaker, createRateLimiter, connectDB as default, deleteCloudinaryAsset, ensureConnectionReady, ensureIndustrialAccess, fetchWithRetry, getIndustrialSession, getTenantConnection, getTenantModel, getTenantSubdomain, idpCircuitBreaker, idpRateLimiter, logger, redactPII, resolveTenantBranding, resolveTenantUri, tenantStorage, uploadBrandingAsset, verifyToken, withIndustrialAuth, withTenantContext };

@@ -6,6 +6,40 @@ import {
   VerifiedTokenPayloadSchema
 } from "./chunk-SZEJBU4U.mjs";
 
+// src/types.ts
+var QuizEventAction = {
+  // ─── Configuración e Ingesta (Administradores/Creators) ───
+  SPACE_LINK_CREATE: "QUIZ_SPACE_LINK_CREATE",
+  SPACE_LINK_UPDATE: "QUIZ_SPACE_LINK_UPDATE",
+  COURSE_CREATE: "QUIZ_COURSE_CREATE",
+  COURSE_UPDATE: "QUIZ_COURSE_UPDATE",
+  COURSE_DELETE: "QUIZ_COURSE_DELETE",
+  EXAM_CONFIG_CREATE: "QUIZ_EXAM_CONFIG_CREATE",
+  EXAM_CONFIG_UPDATE: "QUIZ_EXAM_CONFIG_UPDATE",
+  ASSIGNMENT_CREATE: "QUIZ_ASSIGNMENT_CREATE",
+  ASSIGNMENT_PUBLISH: "QUIZ_ASSIGNMENT_PUBLISHED",
+  // ─── Eventos del Alumno (Recipient) ───
+  ATTEMPT_STARTED: "QUIZ_ATTEMPT_STARTED",
+  ANSWER_SUBMITTED: "QUIZ_ANSWER_SUBMITTED",
+  ATTEMPT_COMPLETED: "QUIZ_ATTEMPT_COMPLETED",
+  ATTEMPT_TIMEOUT: "QUIZ_ATTEMPT_TIMEOUT",
+  // ─── Eventos de Calificación y Auditoría (Creator/Auditor) ───
+  ATTEMPT_MANUALLY_GRADED: "QUIZ_ATTEMPT_MANUALLY_GRADED",
+  ATTEMPT_INVALIDATED: "QUIZ_ATTEMPT_INVALIDATED",
+  // ─── Roles Contextuales ───
+  ROLE_ASSIGNED: "QUIZ_ROLE_ASSIGNED",
+  ROLE_REVOKED: "QUIZ_ROLE_REVOKED"
+};
+var QuizEntityType = {
+  SPACE: "SPACE",
+  COURSE: "COURSE",
+  EXAM_CONFIG: "EXAM_CONFIG",
+  ASSIGNMENT: "ASSIGNMENT",
+  ATTEMPT: "ATTEMPT",
+  QUESTION: "QUESTION",
+  QUIZ_USER_ROLE: "QUIZ_USER_ROLE"
+};
+
 // src/utils/crypto.ts
 import { jwtVerify } from "jose";
 function getSecretKey(customSecret) {
@@ -61,7 +95,7 @@ function getTenantSubdomain(host, rootDomain) {
 // src/proxy.ts
 import { NextResponse } from "next/server";
 
-// src/utils/logger.ts
+// src/logger/index.ts
 var LEVEL_VALUES = {
   DEBUG: 0,
   INFO: 1,
@@ -74,9 +108,11 @@ var globalConfig = {
   appId: process.env.NEXT_PUBLIC_APP_ID || "satellite-app",
   minLevel: process.env.LOG_LEVEL || "INFO"
 };
-function configureLogger(config) {
-  globalConfig = { ...globalConfig, ...config };
-}
+var connectionStatus = "unknown";
+var subscribers = /* @__PURE__ */ new Set();
+var BUFFER_KEY = "abd_logger_buffer";
+var MAX_BUFFER_SIZE = 100;
+var MAX_RETRIES = 5;
 var SENSITIVE_KEYS = [
   "password",
   "token",
@@ -104,15 +140,12 @@ var SENSITIVE_KEYS = [
 var EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 var CREDIT_CARD_REGEX = /\b(?:\d[ -]*?){13,16}\b/g;
 function redactPII(val, keyName) {
-  if (val === null || val === void 0) {
-    return val;
-  }
+  if (val === null || val === void 0) return val;
   if (typeof val === "string") {
     if (keyName && SENSITIVE_KEYS.some((k) => keyName.toLowerCase().includes(k))) {
       return "[REDACTED]";
     }
-    let cleaned = val;
-    cleaned = cleaned.replace(EMAIL_REGEX, "[REDACTED_EMAIL]");
+    let cleaned = val.replace(EMAIL_REGEX, "[REDACTED_EMAIL]");
     cleaned = cleaned.replace(CREDIT_CARD_REGEX, "[REDACTED_CARD]");
     return cleaned;
   }
@@ -120,12 +153,9 @@ function redactPII(val, keyName) {
     return val.map((item) => redactPII(item, keyName));
   }
   if (typeof val === "object") {
-    if (val instanceof Date || val instanceof RegExp) {
-      return val;
-    }
+    if (val instanceof Date || val instanceof RegExp) return val;
     const copy = {};
-    const keys = Object.keys(val);
-    for (const k of keys) {
+    for (const k of Object.keys(val)) {
       copy[k] = redactPII(val[k], k);
     }
     return copy;
@@ -135,11 +165,81 @@ function redactPII(val, keyName) {
   }
   return val;
 }
+function getBuffer() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(BUFFER_KEY);
+    if (!raw) return [];
+    return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+function saveBuffer(buffer) {
+  if (typeof window === "undefined") return;
+  try {
+    const trimmed = buffer.slice(-MAX_BUFFER_SIZE);
+    localStorage.setItem(BUFFER_KEY, JSON.stringify(trimmed));
+  } catch (e) {
+    console.warn("[Logger] Failed to save offline buffer to localStorage:", e);
+  }
+}
+function addToBuffer(payload) {
+  const buffer = getBuffer();
+  buffer.push({ payload, timestamp: Date.now(), retries: 0 });
+  saveBuffer(buffer);
+  if (typeof window !== "undefined") {
+    console.warn(`[Logger] \u{1F4E6} Log buffered offline: ${payload.action} | Buffer: ${buffer.length}/${MAX_BUFFER_SIZE}`);
+  }
+}
+async function flushBuffer() {
+  const buffer = getBuffer();
+  if (buffer.length === 0) return { flushed: 0, failed: 0, dropped: 0 };
+  let flushed = 0;
+  let failed = 0;
+  let dropped = 0;
+  const remaining = [];
+  for (const entry of buffer) {
+    if (entry.retries >= MAX_RETRIES) {
+      console.warn(`[Logger] \u{1F5D1}\uFE0F Dropping buffered log after ${MAX_RETRIES} retries: ${entry.payload.action}`);
+      dropped++;
+      continue;
+    }
+    try {
+      const response = await fetch(globalConfig.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${globalConfig.token || "dev-bypass-token"}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...entry.payload,
+          appId: globalConfig.appId,
+          createdAt: /* @__PURE__ */ new Date()
+        })
+      });
+      if (response.ok) {
+        flushed++;
+      } else {
+        entry.retries++;
+        remaining.push(entry);
+        failed++;
+      }
+    } catch {
+      entry.retries++;
+      remaining.push(entry);
+      failed++;
+    }
+  }
+  saveBuffer(remaining);
+  if (flushed > 0 && typeof window !== "undefined") {
+    console.log(`[Logger] \u2705 Flushed ${flushed} buffered log(s) to ABDLogs`);
+  }
+  return { flushed, failed, dropped };
+}
 function logToConsole(level, message, meta) {
   const minConfigLevel = globalConfig.minLevel || "INFO";
-  if (LEVEL_VALUES[level] < LEVEL_VALUES[minConfigLevel]) {
-    return;
-  }
+  if (LEVEL_VALUES[level] < LEVEL_VALUES[minConfigLevel]) return;
   const logObject = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     level,
@@ -148,15 +248,29 @@ function logToConsole(level, message, meta) {
     meta: meta ? redactPII(meta) : void 0
   };
   const jsonString = JSON.stringify(logObject);
-  if (level === "ERROR") {
-    console.error(jsonString);
-  } else if (level === "WARN") {
-    console.warn(jsonString);
-  } else {
-    console.log(jsonString);
+  if (level === "ERROR") console.error(jsonString);
+  else if (level === "WARN") console.warn(jsonString);
+  else console.log(jsonString);
+}
+function notifySubscribers(status) {
+  for (const cb of subscribers) {
+    try {
+      cb(status);
+    } catch {
+    }
+  }
+}
+function getBaseUrl() {
+  const url = globalConfig.endpoint || "http://localhost:3600/api/logs";
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url.replace("/api/logs", "");
   }
 }
 var logger = {
+  // ── Nivel de log ──────────────────────────────────────────────
   debug(message, meta) {
     logToConsole("DEBUG", message, meta);
   },
@@ -171,21 +285,21 @@ var logger = {
     let finalMeta = meta || {};
     if (errorOrMessage instanceof Error) {
       msg = errorOrMessage.message;
-      finalMeta = {
-        ...finalMeta,
-        stack: errorOrMessage.stack,
-        name: errorOrMessage.name
-      };
+      finalMeta = { ...finalMeta, stack: errorOrMessage.stack, name: errorOrMessage.name };
     } else {
       msg = String(errorOrMessage);
     }
     logToConsole("ERROR", msg, finalMeta);
   },
+  // ── Audit log con Offline Buffering ───────────────────────────
   /**
-   * 📡 Transmits a forensic audit log recursively redacted of PII (except for root userEmail)
-   * to the ABDLogs central microservice in a non-blocking (fire-and-forget) manner.
+   * 📡 Envía un log de auditoría a ABDLogs con buffering offline automático.
+   * - Si el envío falla y estamos en cliente → buffer en localStorage
+   * - Antes de enviar → intenta vaciar el buffer pendiente
+   * - Server-side: solo log de warning si falla (sin localStorage)
+   * - Fail-safe: nunca lanza excepciones
    */
-  audit(payload) {
+  async audit(payload) {
     const { endpoint, token, appId } = globalConfig;
     const redactedPayload = {
       ...payload,
@@ -199,27 +313,116 @@ var logger = {
       entityId: redactedPayload.entityId,
       userId: redactedPayload.userId,
       userEmail: redactedPayload.userEmail
-      // El correo raíz no se enmascara para preservar rastreo de identidad
     });
+    const isBrowser = typeof window !== "undefined";
+    if (isBrowser && getBuffer().length > 0) {
+      flushBuffer().catch(() => {
+      });
+    }
     if (!token && process.env.NODE_ENV === "production") {
-      console.error("[LOGGER_AUDIT_WARNING] Fail-safe active: LOGS_SECRET_TOKEN is missing in production environment variables.");
+      console.error("[LOGGER_AUDIT_WARNING] LOGS_SECRET_TOKEN is missing in production.");
       return;
     }
-    fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token || "dev-bypass-token"}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        ...redactedPayload,
-        createdAt: /* @__PURE__ */ new Date()
-      })
-    }).catch((err) => {
-      console.error(`[LOGGER_AUDIT_ERROR][${appId}] Fail-safe fallback active. Failed to transmit forensic log to central service:`, err instanceof Error ? err.message : err);
-    });
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1e4);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token || "dev-bypass-token"}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...redactedPayload,
+          createdAt: /* @__PURE__ */ new Date()
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        throw new Error(`ABDLogs responded with HTTP ${response.status}`);
+      }
+      connectionStatus = "connected";
+      notifySubscribers("connected");
+      if (isBrowser) {
+        flushBuffer().catch(() => {
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.name === "AbortError" ? "Request timeout (10s)" : error.message : "Unknown error";
+      if (isBrowser) {
+        addToBuffer(payload);
+        connectionStatus = "disconnected";
+        notifySubscribers("disconnected");
+      } else {
+        console.warn(`[Logger] \u26A0\uFE0F Failed to send audit log (server-side): ${message}`);
+      }
+    }
+  },
+  // ── Connection health check ───────────────────────────────────
+  /**
+   * 🔌 Pings ABDLogs health endpoint para verificar conectividad.
+   * Timeout after 5 seconds.
+   */
+  async checkConnection() {
+    const healthUrl = `${getBaseUrl()}/api/logs/health`;
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5e3);
+      const response = await fetch(healthUrl, {
+        method: "GET",
+        signal: controller.signal,
+        cache: "no-store"
+      });
+      clearTimeout(timeout);
+      const latency = Date.now() - start;
+      if (!response.ok) {
+        throw new Error(`Health check responded with HTTP ${response.status}`);
+      }
+      connectionStatus = "connected";
+      notifySubscribers("connected");
+      return { connected: true, latency, error: void 0 };
+    } catch (error) {
+      connectionStatus = "disconnected";
+      notifySubscribers("disconnected");
+      const latency = Date.now() - start;
+      const message = error instanceof Error ? error.name === "AbortError" ? "Connection timeout (5s)" : error.message : "Unknown error";
+      return { connected: false, latency, error: message };
+    }
+  },
+  /** Returns current connection status */
+  getConnectionStatus() {
+    return connectionStatus;
+  },
+  /** Subscribe to connection changes. Returns unsubscribe function. */
+  onConnectionChange(callback) {
+    subscribers.add(callback);
+    return () => {
+      subscribers.delete(callback);
+    };
+  },
+  /** Returns number of entries in the offline buffer */
+  getBufferSize() {
+    return getBuffer().length;
+  },
+  /** Attempts to flush buffered logs */
+  async flushBuffer() {
+    return flushBuffer();
+  },
+  /** Clears all buffered entries */
+  clearBuffer() {
+    saveBuffer([]);
+  },
+  /** @internal Reset for testing */
+  _resetForTest() {
+    connectionStatus = "unknown";
+    subscribers.clear();
   }
 };
+function configureLogger(config) {
+  globalConfig = { ...globalConfig, ...config };
+}
 
 // src/utils/rateLimiter.ts
 var RateLimiter = class {
@@ -973,31 +1176,368 @@ function createAuthRouteHandler(options) {
     return NextResponse2.json({ error: "Route not found" }, { status: 404 });
   };
 }
+
+// src/db/tenant-context.ts
+import { AsyncLocalStorage } from "async_hooks";
+var tenantStorage = new AsyncLocalStorage();
+
+// src/db/tenant-connection.ts
+import mongoose from "mongoose";
+var globalWithTenantConnections = global;
+if (!globalWithTenantConnections.tenantConnections) {
+  globalWithTenantConnections.tenantConnections = {};
+}
+var connectionPool = globalWithTenantConnections.tenantConnections;
+function resolveTenantUri(baseUri, dbName) {
+  const protocolMatch = baseUri.match(/^mongodb(?:\+srv)?:\/\//);
+  if (!protocolMatch) {
+    throw new Error("Invalid MONGODB_URI protocol");
+  }
+  const protocol = protocolMatch[0];
+  const remaining = baseUri.substring(protocol.length);
+  const qIndex = remaining.indexOf("?");
+  const hostAndDb = qIndex === -1 ? remaining : remaining.substring(0, qIndex);
+  const options = qIndex === -1 ? "" : remaining.substring(qIndex);
+  const slashIndex = hostAndDb.lastIndexOf("/");
+  if (slashIndex === -1) {
+    return `${protocol}${hostAndDb}/${dbName}${options}`;
+  } else {
+    const hostPart = hostAndDb.substring(0, slashIndex);
+    return `${protocol}${hostPart}/${dbName}${options}`;
+  }
+}
+function getTenantConnection(dbPrefix, isolationStrategy) {
+  const cacheKey = isolationStrategy === "DATABASE_PER_TENANT" ? `DB_PER_TENANT:${dbPrefix}` : `COLL_PREFIX:${dbPrefix}`;
+  if (connectionPool[cacheKey]) {
+    connectionPool[cacheKey].lastUsed = Date.now();
+    return connectionPool[cacheKey].connection;
+  }
+  const keys = Object.keys(connectionPool);
+  if (keys.length >= 15) {
+    let oldestKey = "";
+    let oldestTime = Infinity;
+    for (const key of keys) {
+      if (connectionPool[key].lastUsed < oldestTime) {
+        oldestTime = connectionPool[key].lastUsed;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey) {
+      const evicted = connectionPool[oldestKey];
+      delete connectionPool[oldestKey];
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[MultiTenant] Evicting LRU connection from cache: ${oldestKey}`);
+      }
+      evicted.connection.close().catch((err) => {
+        console.error(`[MultiTenant] Error closing evicted connection ${oldestKey}:`, err);
+      });
+    }
+  }
+  const baseUri = process.env.MONGODB_URI || "";
+  if (!baseUri) {
+    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  }
+  let targetUri = baseUri;
+  if (isolationStrategy === "DATABASE_PER_TENANT") {
+    const dbName = `abd_tenant_${dbPrefix}`;
+    targetUri = resolveTenantUri(baseUri, dbName);
+  }
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[MultiTenant] Creating connection for ${cacheKey} (Strategy: ${isolationStrategy})`);
+  }
+  const opts = {
+    bufferCommands: false,
+    maxPoolSize: 3,
+    serverSelectionTimeoutMS: 5e3,
+    socketTimeoutMS: 45e3
+  };
+  const conn = mongoose.createConnection(targetUri, opts);
+  conn.on("connected", () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[MultiTenant] Connection established for ${cacheKey}`);
+    }
+  });
+  conn.on("error", (err) => {
+    console.error(`[MultiTenant] Connection error for ${cacheKey}:`, err);
+  });
+  connectionPool[cacheKey] = {
+    connection: conn,
+    lastUsed: Date.now()
+  };
+  return conn;
+}
+async function ensureConnectionReady(conn) {
+  if (conn.readyState === 1) {
+    return conn;
+  }
+  if (conn.readyState === 2) {
+    await new Promise((resolve, reject) => {
+      const onConnected = () => {
+        conn.removeListener("error", onError);
+        resolve();
+      };
+      const onError = (err) => {
+        conn.removeListener("connected", onConnected);
+        reject(err);
+      };
+      conn.once("connected", onConnected);
+      conn.once("error", onError);
+    });
+    return conn;
+  }
+  await conn.asPromise();
+  return conn;
+}
+
+// src/db/tenant-model.ts
+import mongoose2 from "mongoose";
+async function withTenantContext(callback, explicitContext) {
+  const activeStore = tenantStorage.getStore();
+  if (activeStore) {
+    const conn = getTenantConnection(activeStore.dbPrefix, activeStore.isolationStrategy);
+    await ensureConnectionReady(conn);
+    return callback();
+  }
+  if (explicitContext) {
+    const conn = getTenantConnection(explicitContext.dbPrefix, explicitContext.isolationStrategy);
+    await ensureConnectionReady(conn);
+    return tenantStorage.run(explicitContext, callback);
+  }
+  try {
+    const session = await getIndustrialSession();
+    if (session?.authenticated && session.user?.tenantId) {
+      const dbPrefix = session.user.dbPrefix || session.user.tenantId.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const context = {
+        tenantId: session.user.tenantId,
+        dbPrefix,
+        isolationStrategy: session.user.isolationStrategy || "COLLECTION_PREFIX"
+      };
+      const conn = getTenantConnection(context.dbPrefix, context.isolationStrategy);
+      await ensureConnectionReady(conn);
+      return tenantStorage.run(context, callback);
+    }
+  } catch (err) {
+    console.warn("[TenantContext] Failed to get session or cookies:", err);
+  }
+  return callback();
+}
+function compileModelOnConnection(conn, modelName, schema, collectionName) {
+  if (conn.models[modelName]) {
+    return conn.models[modelName];
+  }
+  return conn.model(modelName, schema, collectionName);
+}
+function getModelForTenant(dbPrefix, isolationStrategy, modelName, schema, defaultCollectionName) {
+  const conn = getTenantConnection(dbPrefix, isolationStrategy);
+  let collectionName = defaultCollectionName;
+  if (isolationStrategy === "COLLECTION_PREFIX") {
+    collectionName = `${dbPrefix}_${defaultCollectionName}`;
+  }
+  return compileModelOnConnection(conn, modelName, schema, collectionName);
+}
+function getTenantModel(modelName, schema) {
+  const defaultModel = mongoose2.models[modelName] || mongoose2.model(modelName, schema);
+  const defaultCollectionName = defaultModel.collection.name;
+  return new Proxy(defaultModel, {
+    get(target, prop, receiver) {
+      const store = tenantStorage.getStore();
+      if (!store) {
+        return Reflect.get(target, prop, receiver);
+      }
+      const tenantModel = getModelForTenant(
+        store.dbPrefix,
+        store.isolationStrategy,
+        modelName,
+        schema,
+        defaultCollectionName
+      );
+      const value = Reflect.get(tenantModel, prop);
+      if (typeof value === "function") {
+        return value.bind(tenantModel);
+      }
+      return value;
+    },
+    construct(target, args, newTarget) {
+      const store = tenantStorage.getStore();
+      if (!store) {
+        return Reflect.construct(target, args, newTarget);
+      }
+      const tenantModel = getModelForTenant(
+        store.dbPrefix,
+        store.isolationStrategy,
+        modelName,
+        schema,
+        defaultCollectionName
+      );
+      return Reflect.construct(tenantModel, args, newTarget);
+    }
+  });
+}
+
+// src/utils/cloudinary.ts
+import { v2 as cloudinary } from "cloudinary";
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+async function uploadBrandingAsset(buffer, _filename, tenantId, assetType) {
+  return new Promise((resolve, reject) => {
+    const baseFolder = process.env.CLOUDINARY_BASE_FOLDER || "abd-tenants";
+    const folder = `${baseFolder}/tenants/${tenantId}/branding`;
+    const publicId = `${assetType}_${Date.now()}`;
+    const transformation = assetType === "logo" ? [{ width: 800, height: 400, crop: "limit" }, { quality: "auto", fetch_format: "auto" }] : [{ width: 64, height: 64, crop: "fill" }, { quality: "auto", fetch_format: "auto" }];
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "image",
+        folder,
+        public_id: publicId,
+        transformation
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else if (result) {
+          resolve({
+            url: result.url,
+            publicId: result.public_id,
+            secureUrl: result.secure_url
+          });
+        } else {
+          reject(new Error("Cloudinary upload failed with no response"));
+        }
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
+async function deleteCloudinaryAsset(publicId) {
+  try {
+    await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+  } catch (err) {
+    console.error(`[CLOUDINARY_DELETE_ERROR] Failed to destroy asset ${publicId}:`, err);
+  }
+}
+
+// src/utils/crypto-chain.ts
+import crypto from "crypto";
+import stringify from "fast-json-stable-stringify";
+function computeBlockHash(payload, previousHash, timestamp) {
+  const payloadString = stringify(payload);
+  const entropy = timestamp ? `${previousHash}${payloadString}${timestamp}` : `${previousHash}${payloadString}`;
+  return crypto.createHash("sha256").update(entropy).digest("hex");
+}
+
+// src/utils/tenant-branding.ts
+async function resolveTenantBranding() {
+  try {
+    const { headers: headers2 } = await import("next/headers");
+    const headersList = await headers2();
+    const host = headersList.get("host");
+    const subdomain = getTenantSubdomain(host);
+    if (!subdomain) return null;
+    const providerUrl = process.env.AUTH_PROVIDER_URL || "https://abd-auth.vercel.app";
+    const verifyTenantUrl = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
+    const res = await fetch(verifyTenantUrl, {
+      next: { revalidate: 3600 }
+    });
+    if (!res.ok) return null;
+    const rawData = await res.json();
+    const data = TenantInfoSchema.parse(rawData);
+    return data.branding || null;
+  } catch {
+    return null;
+  }
+}
+
+// src/utils/mongodb.ts
+import mongoose3 from "mongoose";
+var globalWithMongoose = global;
+var cached = globalWithMongoose.__mongoose || { conn: null, promise: null };
+if (!globalWithMongoose.__mongoose) {
+  globalWithMongoose.__mongoose = cached;
+}
+async function connectDB(serviceName) {
+  const MONGODB_URI = process.env.MONGODB_URI || "";
+  if (!MONGODB_URI) {
+    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  }
+  if (cached.conn) {
+    return cached.conn;
+  }
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5e3,
+      socketTimeoutMS: 45e3
+    };
+    cached.promise = mongoose3.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+      const name = serviceName || process.env.NEXT_PUBLIC_APP_ID || "satellite-app";
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[DEV] ${name} MongoDB connected to Cluster`);
+      }
+      return mongooseInstance;
+    });
+  }
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+  const store = tenantStorage.getStore();
+  if (store) {
+    try {
+      const tenantConn = getTenantConnection(store.dbPrefix, store.isolationStrategy);
+      await ensureConnectionReady(tenantConn);
+    } catch (e) {
+      console.error(`[MultiTenant] Failed to connect to tenant database for ${store.dbPrefix}:`, e);
+      throw e;
+    }
+  }
+  return cached.conn;
+}
+var mongodb_default = connectDB;
 export {
   BrandingStyles,
   CircuitBreaker,
   CircuitState,
   FederatedSessionSchema,
   InsufficientPrivilegesError,
+  QuizEntityType,
+  QuizEventAction,
   RateLimiter,
   SessionVerifySchema,
   TenantInfoSchema,
   TokenResponseSchema,
   UnauthorizedAccessError,
   VerifiedTokenPayloadSchema,
+  computeBlockHash,
   configureLogger,
+  mongodb_default as connectDB,
   createAuthRouteHandler,
   createCircuitBreaker,
   createRateLimiter,
+  mongodb_default as default,
+  deleteCloudinaryAsset,
+  ensureConnectionReady,
   ensureIndustrialAccess,
   fetchWithRetry,
   getIndustrialSession,
+  getTenantConnection,
+  getTenantModel,
   getTenantSubdomain,
   idpCircuitBreaker,
   idpRateLimiter,
   logger,
   redactPII,
+  resolveTenantBranding,
+  resolveTenantUri,
+  tenantStorage,
+  uploadBrandingAsset,
   verifyToken,
-  withIndustrialAuth
+  withIndustrialAuth,
+  withTenantContext
 };
 //# sourceMappingURL=index.mjs.map

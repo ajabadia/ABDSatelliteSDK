@@ -1,6 +1,6 @@
-# Technical Documentation: `@abd/satellite-sdk` (v1.0.0)
+# Technical Documentation: `@ajabadia/satellite-sdk` (v1.0.0)
 
-This document specifies the technical architecture, cryptographic verification, security boundaries, and API signatures of the `@abd/satellite-sdk` package.
+This document specifies the technical architecture, cryptographic verification, security boundaries, and API signatures of the `@ajabadia/satellite-sdk` package.
 
 ---
 
@@ -95,10 +95,10 @@ export async function ensureIndustrialAccess(requiredRole?: string, customSecret
 ---
 
 ### 4. Zero-FOUC White-Label Styles: `<BrandingStyles />`
-React Server Component that resolves the tenant, calls `@abd/styles` to convert hex branding color parameters to Tailwind CSS v4 variables, and injects them synchronously in `<head>`.
+React Server Component that resolves the tenant, calls `@ajabadia/styles` to convert hex branding color parameters to Tailwind CSS v4 variables, and injects them synchronously in `<head>`.
 
 ```tsx
-import { BrandingStyles } from '@abd/satellite-sdk';
+import { BrandingStyles } from '@ajabadia/satellite-sdk';
 
 // Usage inside root layout.tsx:
 <head>

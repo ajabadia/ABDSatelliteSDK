@@ -1,4 +1,4 @@
-# 🔍 Auditoría Técnica Integral — `@abd/satellite-sdk` v1.0.0
+# 🔍 Auditoría Técnica Integral — `@ajabadia/satellite-sdk` v1.0.0
 
 **Fecha:** 2026-05-21  
 **Alcance:** Código fuente, documentación, configuración de build, seguridad y dependencias  
@@ -11,12 +11,12 @@
 
 | Propiedad | Valor |
 |---|---|
-| **Nombre** | `@abd/satellite-sdk` |
+| **Nombre** | `@ajabadia/satellite-sdk` |
 | **Versión** | 1.0.0 |
 | **Rol** | SDK centralizado para satélites del ecosistema ABD |
 | **Funciones** | Proxy Guard (middleware), verificación JWT, resolución de tenants, branding dinámico (Zero-FOUC), session hooks SSR/CSR |
 | **Dependencia runtime** | `jose` ^6.2.3 (única) |
-| **Peer dependencies** | `@abd/styles`, `next` >=14, `react` >=18, `react-dom` >=18 |
+| **Peer dependencies** | `@ajabadia/styles`, `next` >=14, `react` >=18, `react-dom` >=18 |
 | **Build tool** | `tsup` (ESM + CJS + DTS) |
 | **Tamaño source** | ~550 líneas TypeScript/TSX en 11 archivos |
 | **Tests** | 42 tests (100% pasando) |
@@ -39,11 +39,11 @@ El SDK implementa el handshake completo: authorize → callback → token exchan
 - **SUPER_ADMIN bypass:** Rol especial que salta todas las restricciones
 
 ### 4. Zero-FOUC Branding
-El componente `<BrandingStyles />` (RSC) inyecta CSS de marca blanca en `<head>` de forma síncrona, eliminando el flash of unstyled content al delegar en `@abd/styles` para la generación de CSS.
+El componente `<BrandingStyles />` (RSC) inyecta CSS de marca blanca en `<head>` de forma síncrona, eliminando el flash of unstyled content al delegar en `@ajabadia/styles` para la generación de CSS.
 
 ### 5. Separación Server/Client impecable
-- `@abd/satellite-sdk` → solo RSC/server-safe
-- `@abd/satellite-sdk/client` → solo client components (`'use client'`)
+- `@ajabadia/satellite-sdk` → solo RSC/server-safe
+- `@ajabadia/satellite-sdk/client` → solo client components (`'use client'`)
 - Previene errores `createContext is not a function` en Turbopack
 
 ### 6. Ventana de inmunidad de 60 segundos
@@ -150,15 +150,15 @@ Este patrón usa `as` para añadir `next.revalidate` (propiedad específica de N
 
 **Recomendación:** Usar el tipo nativo de Next.js para fetch options o crear un tipo helper.
 
-### 7. `BrandingStyles` importa desde `dist/` de `@abd/styles`
+### 7. `BrandingStyles` importa desde `dist/` de `@ajabadia/styles`
 **Archivo:** `src/styles/BrandingStyles.tsx:2`
 ```typescript
-import { generateTenantCss } from '@abd/styles/dist/engine/css-generator.js';
+import { generateTenantCss } from '@ajabadia/styles/dist/engine/css-generator.js';
 ```
 
-Importar desde `dist/` es frágil: rompe si cambia la estructura de build de `@abd/styles`.
+Importar desde `dist/` es frágil: rompe si cambia la estructura de build de `@ajabadia/styles`.
 
-**Recomendación:** `@abd/styles` debería exportar `generateTenantCss` desde su entry point público (`@abd/styles`), o el SDK debería usar el export correcto.
+**Recomendación:** `@ajabadia/styles` debería exportar `generateTenantCss` desde su entry point público (`@ajabadia/styles`), o el SDK debería usar el export correcto.
 
 ### 8. `mongoose-rls.ts` incompleto y con lógica hacky
 **Archivo:** `src/db/mongoose-rls.ts`
@@ -361,7 +361,7 @@ Actualmente `resolveTenant`, `verifySessionExpiry`, y el fetch en `BrandingStyle
 
 ## 🏁 Conclusión
 
-`@abd/satellite-sdk` es un SDK bien diseñado en su arquitectura general — el patrón Proxy Guard, la separación server/client, y la documentación son excelentes. Sin embargo, tiene **debilidades críticas de seguridad** (logs con PII, secreto hardcodeado, fail-open, casts sin validación) que deben abordarse antes de considerarse production-ready para entornos industriales SOC2/GDPR.
+`@ajabadia/satellite-sdk` es un SDK bien diseñado en su arquitectura general — el patrón Proxy Guard, la separación server/client, y la documentación son excelentes. Sin embargo, tiene **debilidades críticas de seguridad** (logs con PII, secreto hardcodeado, fail-open, casts sin validación) que deben abordarse antes de considerarse production-ready para entornos industriales SOC2/GDPR.
 
 ---
 

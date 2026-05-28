@@ -21,13 +21,35 @@ export { BrandingStyles } from './styles/BrandingStyles';
 // API Dynamic Handler
 export { createAuthRouteHandler } from './routeHandler';
 
-// Logger
-export { configureLogger, logger, redactPII } from './utils/logger';
-export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './utils/logger';
+// Logger (enhanced with Offline Buffering)
+export { configureLogger, logger, redactPII } from './logger';
+export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './logger';
+
+// QUIZ Ecosystem Event Types
+export { QuizEventAction, QuizEntityType } from './types';
+export type { QuizEventActionType, QuizEntityTypeValue } from './types';
 
 // Rate Limiter
 export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
 export type { RateLimiterOptions } from './utils/rateLimiter';
+
+// Multi-Tenant Database Module
+export type { TenantContext } from './db/tenant-context';
+export { tenantStorage } from './db/tenant-context';
+export { resolveTenantUri, getTenantConnection, ensureConnectionReady } from './db/tenant-connection';
+export { withTenantContext, getTenantModel } from './db/tenant-model';
+
+// Cloudinary Branding Assets
+export { uploadBrandingAsset, deleteCloudinaryAsset } from './utils/cloudinary';
+
+// Crypto Chain (forensic audit hashing)
+export { computeBlockHash } from './utils/crypto-chain';
+
+// Tenant Branding resolver (RSC-safe)
+export { resolveTenantBranding } from './utils/tenant-branding';
+
+// MongoDB connection (canonical with tenant-awareness)
+export { default as connectDB, default } from './utils/mongodb';
 
 // Circuit Breaker
 export { CircuitBreaker, idpCircuitBreaker, createCircuitBreaker, CircuitState } from './utils/circuitBreaker';

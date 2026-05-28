@@ -1,19 +1,19 @@
-# AI Integration Prompt: `@abd/satellite-sdk`
+# AI Integration Prompt: `@ajabadia/satellite-sdk`
 
 Copy and paste this prompt when instructing an AI agent or developer to integrate the centralized SDK into a new Next.js satellite application.
 
 ---
 
 ```markdown
-# SYSTEM INSTRUCTION: Integrate @abd/satellite-sdk into Next.js App
+# SYSTEM INSTRUCTION: Integrate @ajabadia/satellite-sdk into Next.js App
 
-You are tasked with integrating the centralized security and branding SDK (@abd/satellite-sdk) into this Next.js satellite application. Follow these instructions strictly:
+You are tasked with integrating the centralized security and branding SDK (@ajabadia/satellite-sdk) into this Next.js satellite application. Follow these instructions strictly:
 
 ## 1. Dependency Installation
 Add the SDK and styles package as dependencies:
 ```bash
-pnpm add @abd/satellite-sdk
-# Ensure @abd/styles is also installed
+pnpm add @ajabadia/satellite-sdk
+# Ensure @ajabadia/styles is also installed
 pnpm add github:ajabadia/ABDStyles#main --legacy-peer-deps
 ```
 
@@ -30,7 +30,7 @@ AUTH_PROVIDER_URL="https://abd-auth.vercel.app"
 ## 3. Configure the Next.js 16 Proxy Guard (src/proxy.ts)
 Instead of standard middleware.ts, create `src/proxy.ts` exporting a `proxy` function wrapped with `withIndustrialAuth`:
 ```typescript
-import { withIndustrialAuth } from '@abd/satellite-sdk';
+import { withIndustrialAuth } from '@ajabadia/satellite-sdk';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
@@ -53,7 +53,7 @@ export const config = {
 ## 4. Setup Dynamic API Routes (src/app/api/auth/[...auth]/route.ts)
 Create a dynamic catch-all route to handle callbacks, logouts, and session status requests:
 ```typescript
-import { createAuthRouteHandler } from '@abd/satellite-sdk';
+import { createAuthRouteHandler } from '@ajabadia/satellite-sdk';
 
 const handler = createAuthRouteHandler({
   appId: process.env.NEXT_PUBLIC_APP_ID!,
@@ -68,7 +68,7 @@ export { handler as GET, handler as POST };
 ## 5. Implement Root Layout Styling & Provider (src/app/[locale]/layout.tsx)
 Wrap the layout structure with `<SessionProvider>` and inject dynamic White-Label variables in the head utilizing `<BrandingStyles />`:
 ```tsx
-import { BrandingStyles, SessionProvider, getIndustrialSession } from '@abd/satellite-sdk';
+import { BrandingStyles, SessionProvider, getIndustrialSession } from '@ajabadia/satellite-sdk';
 
 export default async function RootLayout({
   children,
@@ -100,7 +100,7 @@ export default async function RootLayout({
 *   **Server Components & APIs**:
     Use `getIndustrialSession()` or assert access using `ensureIndustrialAccess(role)`:
     ```typescript
-    import { getIndustrialSession, ensureIndustrialAccess } from '@abd/satellite-sdk';
+    import { getIndustrialSession, ensureIndustrialAccess } from '@ajabadia/satellite-sdk';
 // Types (FederatedSession, UserProfile) should be imported from '@/lib/session-types' instead of '@/lib/session'.
     
     export default async function ServerPage() {
@@ -116,7 +116,7 @@ export default async function RootLayout({
     ```tsx
     'use client';
     
-    import { useSession } from '@abd/satellite-sdk/client';
+    import { useSession } from '@ajabadia/satellite-sdk/client';
     
     export default function ClientView() {
       const { session, status } = useSession();
@@ -131,12 +131,12 @@ export default async function RootLayout({
 
 ### ⚠️ React Server Components (RSC) vs Client Components imports
 Next.js 16 + Turbopack will fail with `TypeError: (0, X.createContext) is not a function` if client hooks/providers (`useSession`, `SessionProvider`) and server components (`BrandingStyles`, `getIndustrialSession`) are mixed in import routes or if Server Components import `react` directly.
-*   **Always** import server components from `@abd/satellite-sdk` (RSC-friendly).
-*   **Always** import client hooks/providers from `@abd/satellite-sdk/client`.
+*   **Always** import server components from `@ajabadia/satellite-sdk` (RSC-friendly).
+*   **Always** import client hooks/providers from `@ajabadia/satellite-sdk/client`.
 *   Avoid importing `React` in Server Components. Prefer standard React JSX shorthand `<>...</>` to rely exclusively on `react/jsx-runtime`.
 
 ### 🧭 Sidebar Navigation Customization
-When utilizing `TacticalSidebar` from `@abd/styles`:
+When utilizing `TacticalSidebar` from `@ajabadia/styles`:
 *   Make sure to pass `homeHref={/${locale}}` (or equivalent localized root path) to the sidebar so the logo click doesn't point to the default `/dashboard`.
 *   Pass a wrapper `LinkComponent` (like Next.js/next-intl `Link`) as a prop to keep page transitions within the single-page application router context.
 

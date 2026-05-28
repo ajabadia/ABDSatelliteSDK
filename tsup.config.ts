@@ -8,5 +8,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: false,
-  external: ['react', 'react-dom', 'next', '@abd/styles', 'next/server', 'next/headers'],
+  external: ['react', 'react-dom', 'next', '@ajabadia/styles', 'next/server', 'next/headers'],
 });

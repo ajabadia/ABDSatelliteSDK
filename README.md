@@ -1,8 +1,13 @@
-# 🛰️ @abd/satellite-sdk
+# 🛰️ @ajabadia/satellite-sdk
 
 Centralized npm package for high-speed integration of satellite applications within the **ABD Industrial Ecosystem**. 
 
-It encapsulates SSO federated callbacks, JWT decryption with `jose`, domain-tenant resolution, cross-tenant security guardrails, allowed-apps licensing check, loop mitigation, and SSR branding style injections.
+This SDK provides all the foundational tooling required to connect a satellite app to the central infrastructure, including:
+
+- 🔐 **Authentication & Security**: SSO federated callbacks, JWT decryption (via `jose`), and route protection with allowed-apps licensing checks.
+- 🏢 **Tenant Management**: Domain-tenant resolution, loop mitigation, and strict cross-tenant security guardrails.
+- 🎨 **Branding Injection (SSR)**: Zero-FOUC dynamic theme style injections compatible with Tailwind CSS v4.
+- 📝 **Structured Logging**: Centralized, SOC2/GDPR compliant logging with automatic PII redaction for the `ABDLogs` microservice.
 
 ---
 
@@ -10,10 +15,10 @@ It encapsulates SSO federated callbacks, JWT decryption with `jose`, domain-tena
 
 ### 1. Install Dependecies
 
-Make sure `@abd/styles` is linked in your `package.json`, then install the SDK:
+Make sure `@ajabadia/styles` is linked in your `package.json`, then install the SDK:
 
 ```bash
-pnpm add @abd/satellite-sdk
+pnpm add @ajabadia/satellite-sdk
 ```
 
 ### 2. Configure Environment Variables (`.env`)
@@ -31,7 +36,7 @@ AUTH_PROVIDER_URL="https://abd-auth.vercel.app"
 Create a catch-all route to handle login callback, logout, and session status:
 
 ```typescript
-import { createAuthRouteHandler } from '@abd/satellite-sdk';
+import { createAuthRouteHandler } from '@ajabadia/satellite-sdk';
 
 const handler = createAuthRouteHandler({
   appId: process.env.NEXT_PUBLIC_APP_ID!,
@@ -48,7 +53,7 @@ export { handler as GET, handler as POST };
 Protect your routes, handle allowedApps verification, and prevent loop redirections:
 
 ```typescript
-import { withIndustrialAuth } from '@abd/satellite-sdk';
+import { withIndustrialAuth } from '@ajabadia/satellite-sdk';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
@@ -73,7 +78,7 @@ export const config = {
 Inject tenant branding styles dynamically and wrap client components with the session provider:
 
 ```tsx
-import { BrandingStyles, SessionProvider, getIndustrialSession } from '@abd/satellite-sdk';
+import { BrandingStyles, SessionProvider, getIndustrialSession } from '@ajabadia/satellite-sdk';
 
 export default async function RootLayout({
   children,
@@ -104,7 +109,7 @@ export default async function RootLayout({
 
 *   **Server Components & APIs**:
     ```typescript
-    import { getIndustrialSession, ensureIndustrialAccess } from '@abd/satellite-sdk';
+    import { getIndustrialSession, ensureIndustrialAccess } from '@ajabadia/satellite-sdk';
     
     // Get session
     const session = await getIndustrialSession();
@@ -117,7 +122,7 @@ export default async function RootLayout({
     ```tsx
     'use client';
     
-    import { useSession } from '@abd/satellite-sdk';
+    import { useSession } from '@ajabadia/satellite-sdk';
     
     export default function Dashboard() {
       const { session, status } = useSession();
@@ -137,7 +142,7 @@ The SDK includes a centralized structured logger designed for SOC2/GDPR complian
 ### Setup and Configuration
 
 ```typescript
-import { configureLogger, logger } from '@abd/satellite-sdk';
+import { configureLogger, logger } from '@ajabadia/satellite-sdk';
 
 configureLogger({
   endpoint: process.env.LOGS_SERVICE_URL, // Defaults to http://localhost:3600/api/logs

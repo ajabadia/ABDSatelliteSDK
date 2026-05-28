@@ -1,4 +1,4 @@
-# 🔍 Auditoría Técnica — `@abd/satellite-sdk` v1.0.0 (v07)
+# 🔍 Auditoría Técnica — `@ajabadia/satellite-sdk` v1.0.0 (v07)
 
 **Fecha:** 25 de Mayo de 2026
 **Rol:** SDK Centralizado para Satélites del Ecosistema ABD
@@ -59,7 +59,7 @@ Usados en `proxy.ts`, `routeHandler.ts`, `session.ts`, `BrandingStyles.tsx`.
 Validación de formato y longitud implementada.
 
 ### ✅ Issue #6 — BrandingStyles importa de dist/: CORREGIDO Y VERIFICADO
-Verificado: usa exportaciones públicas de `@abd/styles`.
+Verificado: usa exportaciones públicas de `@ajabadia/styles`.
 
 ### ✅ Issue #7 — mongoose-rls.ts incompleto: CORREGIDO Y VERIFICADO
 El archivo `src/db/mongoose-rls.ts` ya no existe en el árbol.
@@ -176,7 +176,7 @@ Comentario actualizado para reflejar que los defaults aplican a múltiples tipos
 
 ## 🏁 Conclusión
 
-**`@abd/satellite-sdk`** ha sido transformado: de tener **debilidades críticas de seguridad** (logs con PII, secreto hardcodeado, fail-open, casts sin validación) a un SDK **production-ready** con:
+**`@ajabadia/satellite-sdk`** ha sido transformado: de tener **debilidades críticas de seguridad** (logs con PII, secreto hardcodeado, fail-open, casts sin validación) a un SDK **production-ready** con:
 - ✅ Validación Zod de todas las respuestas externas
 - ✅ Manejo de errores con clases personalizadas
 - ✅ 48 tests de cobertura

@@ -1,5 +1,5 @@
 import React from 'react';
-import { F as FederatedSession } from './types-CwdvEh2z.mjs';
+import { F as FederatedSession } from './types-DXegacV1.mjs';
 import 'next/server';
 
 interface ClientSessionContext {

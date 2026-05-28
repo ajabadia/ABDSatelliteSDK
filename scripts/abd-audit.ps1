@@ -1,7 +1,7 @@
 # ABD Suite - CENTRAL AUDIT DELEGATOR
 # Checks the local suite utilidades directory first, falling back to node_modules/@abd/styles.
 
-$SuiteCentralScript = "D:\desarrollos\ABDSuite\utilidades\scripts\abd-audit.ps1"
+$SuiteCentralScript = Join-Path $PSScriptRoot "..\..\utilidades\scripts\abd-audit.ps1"
 $StylesCentralScript = "$PSScriptRoot/../node_modules/@abd/styles/scripts/abd-audit.ps1"
 
 if (Test-Path $SuiteCentralScript) {

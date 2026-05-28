@@ -1,8 +1,15 @@
 {
-  "name": "@abd/satellite-sdk",
+  "name": "@ajabadia/satellite-sdk",
   "version": "1.0.0",
   "description": "Centralized SDK for ABD Ecosystem Satellites: Federated Identity, Tenant Access, and Branding.",
   "main": "./dist/index.mjs",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ajabadia/ABDSatelliteSDK.git"
+  },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
@@ -18,17 +25,20 @@
     "full-audit": "powershell -File ./scripts/abd-audit.ps1"
   },
   "dependencies": {
+    "cloudinary": "^2.5.1",
+    "fast-json-stable-stringify": "^2.1.0",
     "jose": "^6.2.3",
+    "mongoose": "^9.6.2",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@abd/styles": "^1.0.0",
+    "@ajabadia/styles": "^1.0.0",
     "next": ">=14.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
-    "@abd/styles": "file:../ABDStyles",
+    "@ajabadia/styles": "file:../ABDStyles",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -44,11 +54,11 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
     "./client": {
-      "types": "./dist/client.d.ts",
+      "types": "./dist/client.d.mts",
       "import": "./dist/client.mjs"
     }
   },

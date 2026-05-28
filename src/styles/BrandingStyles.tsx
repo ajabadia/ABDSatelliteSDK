@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { generateTenantCss } from '@abd/styles';
+import { generateTenantCss } from '@ajabadia/styles';
 import { getTenantSubdomain } from '../utils/subdomain';
 import type { TenantInfo, NextFetchRequestInit } from '../types';
 import { TenantInfoSchema } from '../utils/schemas.js';
