@@ -1043,7 +1043,7 @@ async function ensureIndustrialAccess(requiredRole, customSecret) {
 
 // src/styles/BrandingStyles.tsx
 import { headers } from "next/headers";
-import { generateTenantCss } from "@abd/styles";
+import { generateTenantCss } from "@ajabadia/styles";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 async function BrandingStyles({
   authProviderUrl,
