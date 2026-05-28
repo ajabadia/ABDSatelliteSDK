@@ -37,7 +37,7 @@ export type { RateLimiterOptions } from './utils/rateLimiter';
 export type { TenantContext } from './db/tenant-context';
 export { tenantStorage } from './db/tenant-context';
 export { resolveTenantUri, getTenantConnection, ensureConnectionReady } from './db/tenant-connection';
-export { withTenantContext, getTenantModel } from './db/tenant-model';
+export { withTenantContext, getTenantModel, getGlobalModel } from './db/tenant-model';
 
 // Cloudinary Branding Assets
 export { uploadBrandingAsset, deleteCloudinaryAsset } from './utils/cloudinary';
@@ -48,9 +48,6 @@ export { computeBlockHash } from './utils/crypto-chain';
 // Tenant Branding resolver (RSC-safe)
 export { resolveTenantBranding } from './utils/tenant-branding';
 
-// MongoDB connection (canonical with tenant-awareness)
-export { default as connectDB, default } from './utils/mongodb';
-
-// Circuit Breaker
+export { default as connectDB, connectAuthDB, connectLogsDB, default } from './utils/mongodb';
 export { CircuitBreaker, idpCircuitBreaker, createCircuitBreaker, CircuitState } from './utils/circuitBreaker';
 export type { CircuitBreakerOptions, CircuitBreakerStatus } from './utils/circuitBreaker';

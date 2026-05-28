@@ -38,7 +38,7 @@
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
-    "@ajabadia/styles": "file:../ABDStyles",
+    "@ajabadia/styles": "latest",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

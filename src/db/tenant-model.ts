@@ -144,3 +144,24 @@ export function getTenantModel<T>(
     }
   }) as unknown as Model<T>;
 }
+
+/**
+ * Resolves a model on a specific Global Cluster (AUTH or LOGS) synchronously.
+ * Mongoose natively buffers commands until the connection is fully established.
+ */
+export function getGlobalModel<T>(
+  modelName: string,
+  schema: Schema<T>,
+  clusterTarget: 'AUTH' | 'LOGS'
+): Model<T> {
+  const mongodbModule = require('../utils/mongodb');
+  // Get the synchronous Mongoose Connection object
+  const conn: mongoose.Connection = clusterTarget === 'AUTH' 
+    ? mongodbModule.getAuthConnectionSync() 
+    : mongodbModule.getLogsConnectionSync();
+    
+  if (conn.models[modelName]) {
+    return conn.models[modelName] as Model<T>;
+  }
+  return conn.model<T>(modelName, schema);
+}
