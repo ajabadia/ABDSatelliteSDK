@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchWithRetry } from './proxy';
+import { fetchWithRetry } from './utils/fetch-with-retry';
 
 // Mock the logger to prevent console output during tests
 vi.mock('./utils/logger', () => ({

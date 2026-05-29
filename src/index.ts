@@ -7,10 +7,12 @@ export { verifyToken } from './utils/crypto';
 export { getTenantSubdomain } from './utils/subdomain';
 
 // Proxy Guard
-export { withIndustrialAuth, fetchWithRetry } from './proxy';
+export { withIndustrialAuth } from './proxy';
+export { fetchWithRetry } from './utils/fetch-with-retry';
 
 // Server-side session helpers
 export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
+export { resolveTargetTenantContext } from './utils/tenant-resolver';
 
 // Schemas
 export * from './utils/schemas.js';
@@ -26,8 +28,8 @@ export { configureLogger, logger, redactPII } from './logger';
 export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './logger';
 
 // QUIZ Ecosystem Event Types
-export { QuizEventAction, QuizEntityType } from './types';
-export type { QuizEventActionType, QuizEntityTypeValue } from './types';
+export { QuizEventAction, QuizEntityType } from './events';
+export type { QuizEventActionType, QuizEntityTypeValue } from './events';
 
 // Rate Limiter
 export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
@@ -42,6 +44,10 @@ export { withTenantContext, getTenantModel, getGlobalModel } from './db/tenant-m
 // Cloudinary Branding Assets
 export { uploadBrandingAsset, deleteCloudinaryAsset } from './utils/cloudinary';
 
+// Branding Utils
+export { adjustColor, getContrastColor, hexToHslComponents } from './utils/branding/color-utils';
+export { generateTenantCss } from './utils/branding/css-generator';
+
 // Crypto Chain (forensic audit hashing)
 export { computeBlockHash } from './utils/crypto-chain';
 
@@ -51,3 +57,11 @@ export { resolveTenantBranding } from './utils/tenant-branding';
 export { default as connectDB, connectAuthDB, connectLogsDB, default } from './utils/mongodb';
 export { CircuitBreaker, idpCircuitBreaker, createCircuitBreaker, CircuitState } from './utils/circuitBreaker';
 export type { CircuitBreakerOptions, CircuitBreakerStatus } from './utils/circuitBreaker';
+
+// Security (AES encryption)
+export { SecurityService } from './utils/security';
+
+// Resend Email Service
+export { ResendEmailService } from './utils/email';
+export type { ResendEmailOptions } from './utils/email';
+

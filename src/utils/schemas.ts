@@ -21,7 +21,7 @@ export const FederatedSessionSchema = z.object({
     tenantId: z.string(),
     permissions: z.array(z.string()).default([]),
     dbPrefix: z.string().default(''),
-    isolationStrategy: z.string().default('DATABASE_PER_TENANT'),
+    isolationStrategy: z.string().default('COLLECTION_PREFIX'),
     allowedApps: z.array(z.string()).optional(),
     sessionId: z.string().optional()
   }).optional(),

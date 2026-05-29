@@ -4,41 +4,7 @@ import {
   TenantInfoSchema,
   TokenResponseSchema,
   VerifiedTokenPayloadSchema
-} from "./chunk-SZEJBU4U.mjs";
-
-// src/types.ts
-var QuizEventAction = {
-  // ─── Configuración e Ingesta (Administradores/Creators) ───
-  SPACE_LINK_CREATE: "QUIZ_SPACE_LINK_CREATE",
-  SPACE_LINK_UPDATE: "QUIZ_SPACE_LINK_UPDATE",
-  COURSE_CREATE: "QUIZ_COURSE_CREATE",
-  COURSE_UPDATE: "QUIZ_COURSE_UPDATE",
-  COURSE_DELETE: "QUIZ_COURSE_DELETE",
-  EXAM_CONFIG_CREATE: "QUIZ_EXAM_CONFIG_CREATE",
-  EXAM_CONFIG_UPDATE: "QUIZ_EXAM_CONFIG_UPDATE",
-  ASSIGNMENT_CREATE: "QUIZ_ASSIGNMENT_CREATE",
-  ASSIGNMENT_PUBLISH: "QUIZ_ASSIGNMENT_PUBLISHED",
-  // ─── Eventos del Alumno (Recipient) ───
-  ATTEMPT_STARTED: "QUIZ_ATTEMPT_STARTED",
-  ANSWER_SUBMITTED: "QUIZ_ANSWER_SUBMITTED",
-  ATTEMPT_COMPLETED: "QUIZ_ATTEMPT_COMPLETED",
-  ATTEMPT_TIMEOUT: "QUIZ_ATTEMPT_TIMEOUT",
-  // ─── Eventos de Calificación y Auditoría (Creator/Auditor) ───
-  ATTEMPT_MANUALLY_GRADED: "QUIZ_ATTEMPT_MANUALLY_GRADED",
-  ATTEMPT_INVALIDATED: "QUIZ_ATTEMPT_INVALIDATED",
-  // ─── Roles Contextuales ───
-  ROLE_ASSIGNED: "QUIZ_ROLE_ASSIGNED",
-  ROLE_REVOKED: "QUIZ_ROLE_REVOKED"
-};
-var QuizEntityType = {
-  SPACE: "SPACE",
-  COURSE: "COURSE",
-  EXAM_CONFIG: "EXAM_CONFIG",
-  ASSIGNMENT: "ASSIGNMENT",
-  ATTEMPT: "ATTEMPT",
-  QUESTION: "QUESTION",
-  QUIZ_USER_ROLE: "QUIZ_USER_ROLE"
-};
+} from "./chunk-4XMRWPPS.mjs";
 
 // src/utils/crypto.ts
 import { jwtVerify } from "jose";
@@ -95,24 +61,7 @@ function getTenantSubdomain(host, rootDomain) {
 // src/proxy.ts
 import { NextResponse } from "next/server";
 
-// src/logger/index.ts
-var LEVEL_VALUES = {
-  DEBUG: 0,
-  INFO: 1,
-  WARN: 2,
-  ERROR: 3
-};
-var globalConfig = {
-  endpoint: process.env.LOGS_SERVICE_URL || "http://localhost:3600/api/logs",
-  token: process.env.LOGS_SECRET_TOKEN,
-  appId: process.env.NEXT_PUBLIC_APP_ID || "satellite-app",
-  minLevel: process.env.LOG_LEVEL || "INFO"
-};
-var connectionStatus = "unknown";
-var subscribers = /* @__PURE__ */ new Set();
-var BUFFER_KEY = "abd_logger_buffer";
-var MAX_BUFFER_SIZE = 100;
-var MAX_RETRIES = 5;
+// src/logger/redact-pii.ts
 var SENSITIVE_KEYS = [
   "password",
   "token",
@@ -165,6 +114,19 @@ function redactPII(val, keyName) {
   }
   return val;
 }
+
+// src/logger/types.ts
+var LEVEL_VALUES = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3
+};
+
+// src/logger/offline-buffer.ts
+var BUFFER_KEY = "abd_logger_buffer";
+var MAX_BUFFER_SIZE = 100;
+var MAX_RETRIES = 5;
 function getBuffer() {
   if (typeof window === "undefined") return [];
   try {
@@ -192,7 +154,7 @@ function addToBuffer(payload) {
     console.warn(`[Logger] \u{1F4E6} Log buffered offline: ${payload.action} | Buffer: ${buffer.length}/${MAX_BUFFER_SIZE}`);
   }
 }
-async function flushBuffer() {
+async function flushBuffer(endpoint, token, appId) {
   const buffer = getBuffer();
   if (buffer.length === 0) return { flushed: 0, failed: 0, dropped: 0 };
   let flushed = 0;
@@ -206,15 +168,15 @@ async function flushBuffer() {
       continue;
     }
     try {
-      const response = await fetch(globalConfig.endpoint, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${globalConfig.token || "dev-bypass-token"}`,
+          Authorization: `Bearer ${token || "dev-bypass-token"}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           ...entry.payload,
-          appId: globalConfig.appId,
+          appId,
           createdAt: /* @__PURE__ */ new Date()
         })
       });
@@ -237,16 +199,18 @@ async function flushBuffer() {
   }
   return { flushed, failed, dropped };
 }
+function clearBuffer() {
+  saveBuffer([]);
+}
+
+// src/logger/index.ts
+var globalConfig = { endpoint: process.env.LOGS_SERVICE_URL || "http://localhost:3600/api/logs", token: process.env.LOGS_SECRET_TOKEN, appId: process.env.NEXT_PUBLIC_APP_ID || "satellite-app", minLevel: process.env.LOG_LEVEL || "INFO" };
+var connectionStatus = "unknown";
+var subscribers = /* @__PURE__ */ new Set();
 function logToConsole(level, message, meta) {
   const minConfigLevel = globalConfig.minLevel || "INFO";
   if (LEVEL_VALUES[level] < LEVEL_VALUES[minConfigLevel]) return;
-  const logObject = {
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    level,
-    appId: globalConfig.appId,
-    message: redactPII(message),
-    meta: meta ? redactPII(meta) : void 0
-  };
+  const logObject = { timestamp: (/* @__PURE__ */ new Date()).toISOString(), level, appId: globalConfig.appId, message: redactPII(message), meta: meta ? redactPII(meta) : void 0 };
   const jsonString = JSON.stringify(logObject);
   if (level === "ERROR") console.error(jsonString);
   else if (level === "WARN") console.warn(jsonString);
@@ -270,7 +234,6 @@ function getBaseUrl() {
   }
 }
 var logger = {
-  // ── Nivel de log ──────────────────────────────────────────────
   debug(message, meta) {
     logToConsole("DEBUG", message, meta);
   },
@@ -281,44 +244,16 @@ var logger = {
     logToConsole("WARN", message, meta);
   },
   error(message, errorOrMessage, meta) {
-    let msg = "";
-    let finalMeta = meta || {};
-    if (errorOrMessage instanceof Error) {
-      msg = errorOrMessage.message;
-      finalMeta = { ...finalMeta, stack: errorOrMessage.stack, name: errorOrMessage.name };
-    } else {
-      msg = String(errorOrMessage);
-    }
-    logToConsole("ERROR", msg, finalMeta);
+    const msg = errorOrMessage instanceof Error ? errorOrMessage.message : String(errorOrMessage);
+    logToConsole("ERROR", msg, errorOrMessage instanceof Error ? { ...meta || {}, stack: errorOrMessage.stack, name: errorOrMessage.name } : meta);
   },
-  // ── Audit log con Offline Buffering ───────────────────────────
-  /**
-   * 📡 Envía un log de auditoría a ABDLogs con buffering offline automático.
-   * - Si el envío falla y estamos en cliente → buffer en localStorage
-   * - Antes de enviar → intenta vaciar el buffer pendiente
-   * - Server-side: solo log de warning si falla (sin localStorage)
-   * - Fail-safe: nunca lanza excepciones
-   */
   async audit(payload) {
     const { endpoint, token, appId } = globalConfig;
-    const redactedPayload = {
-      ...payload,
-      appId: appId || payload.appId || "unknown",
-      changedFields: payload.changedFields ? redactPII(payload.changedFields) : {},
-      previousState: payload.previousState ? redactPII(payload.previousState) : void 0
-    };
-    logToConsole("INFO", `[AUDIT_EVENT][${redactedPayload.action}] entityType=${redactedPayload.entityType} entityId=${redactedPayload.entityId}`, {
-      action: redactedPayload.action,
-      entityType: redactedPayload.entityType,
-      entityId: redactedPayload.entityId,
-      userId: redactedPayload.userId,
-      userEmail: redactedPayload.userEmail
-    });
+    const redactedPayload = { ...payload, appId: appId || payload.appId || "unknown", changedFields: payload.changedFields ? redactPII(payload.changedFields) : {}, previousState: payload.previousState ? redactPII(payload.previousState) : void 0 };
+    logToConsole("INFO", `[AUDIT_EVENT][${redactedPayload.action}] entityType=${redactedPayload.entityType}`, { action: redactedPayload.action, entityType: redactedPayload.entityType, entityId: redactedPayload.entityId, userId: redactedPayload.userId, userEmail: redactedPayload.userEmail });
     const isBrowser = typeof window !== "undefined";
-    if (isBrowser && getBuffer().length > 0) {
-      flushBuffer().catch(() => {
-      });
-    }
+    if (isBrowser && getBuffer().length > 0) flushBuffer(endpoint, token, appId).catch(() => {
+    });
     if (!token && process.env.NODE_ENV === "production") {
       console.error("[LOGGER_AUDIT_WARNING] LOGS_SECRET_TOKEN is missing in production.");
       return;
@@ -326,95 +261,59 @@ var logger = {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1e4);
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token || "dev-bypass-token"}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ...redactedPayload,
-          createdAt: /* @__PURE__ */ new Date()
-        }),
-        signal: controller.signal
-      });
+      const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${token || "dev-bypass-token"}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...redactedPayload, createdAt: /* @__PURE__ */ new Date() }), signal: controller.signal });
       clearTimeout(timeout);
-      if (!response.ok) {
-        throw new Error(`ABDLogs responded with HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`ABDLogs responded with HTTP ${response.status}`);
       connectionStatus = "connected";
       notifySubscribers("connected");
-      if (isBrowser) {
-        flushBuffer().catch(() => {
-        });
-      }
+      if (isBrowser) flushBuffer(endpoint, token, appId).catch(() => {
+      });
     } catch (error) {
       const message = error instanceof Error ? error.name === "AbortError" ? "Request timeout (10s)" : error.message : "Unknown error";
       if (isBrowser) {
         addToBuffer(payload);
         connectionStatus = "disconnected";
         notifySubscribers("disconnected");
-      } else {
-        console.warn(`[Logger] \u26A0\uFE0F Failed to send audit log (server-side): ${message}`);
-      }
+      } else console.warn(`[Logger] \u26A0\uFE0F Failed to send audit log (server-side): ${message}`);
     }
   },
-  // ── Connection health check ───────────────────────────────────
-  /**
-   * 🔌 Pings ABDLogs health endpoint para verificar conectividad.
-   * Timeout after 5 seconds.
-   */
   async checkConnection() {
     const healthUrl = `${getBaseUrl()}/api/logs/health`;
     const start = Date.now();
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5e3);
-      const response = await fetch(healthUrl, {
-        method: "GET",
-        signal: controller.signal,
-        cache: "no-store"
-      });
+      const response = await fetch(healthUrl, { method: "GET", signal: controller.signal, cache: "no-store" });
       clearTimeout(timeout);
       const latency = Date.now() - start;
-      if (!response.ok) {
-        throw new Error(`Health check responded with HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Health check responded with HTTP ${response.status}`);
       connectionStatus = "connected";
       notifySubscribers("connected");
-      return { connected: true, latency, error: void 0 };
+      return { connected: true, latency };
     } catch (error) {
       connectionStatus = "disconnected";
       notifySubscribers("disconnected");
-      const latency = Date.now() - start;
-      const message = error instanceof Error ? error.name === "AbortError" ? "Connection timeout (5s)" : error.message : "Unknown error";
-      return { connected: false, latency, error: message };
+      return { connected: false, latency: Date.now() - start, error: error instanceof Error ? error.name === "AbortError" ? "Connection timeout (5s)" : error.message : "Unknown error" };
     }
   },
-  /** Returns current connection status */
   getConnectionStatus() {
     return connectionStatus;
   },
-  /** Subscribe to connection changes. Returns unsubscribe function. */
   onConnectionChange(callback) {
     subscribers.add(callback);
     return () => {
       subscribers.delete(callback);
     };
   },
-  /** Returns number of entries in the offline buffer */
   getBufferSize() {
     return getBuffer().length;
   },
-  /** Attempts to flush buffered logs */
   async flushBuffer() {
-    return flushBuffer();
+    return flushBuffer(globalConfig.endpoint, globalConfig.token, globalConfig.appId);
   },
-  /** Clears all buffered entries */
   clearBuffer() {
-    saveBuffer([]);
+    clearBuffer();
   },
-  /** @internal Reset for testing */
   _resetForTest() {
     connectionStatus = "unknown";
     subscribers.clear();
@@ -428,33 +327,14 @@ function configureLogger(config) {
 var RateLimiter = class {
   buckets = /* @__PURE__ */ new Map();
   refillRate;
-  // tokens per millisecond
   maxTokens;
   minDelayMs;
-  /**
-   * Create a new RateLimiter
-   * 
-   * @param options Configuration options
-   * @param options.requestsPerSecond - Maximum sustained requests per second (default: 10)
-   * @param options.burstSize - Maximum burst of requests allowed (default: 20)
-   * @param options.minDelayMs - Minimum delay between requests in ms (default: 50)
-   */
   constructor(options = {}) {
-    const {
-      requestsPerSecond = 10,
-      burstSize = 20,
-      minDelayMs = 50
-    } = options;
+    const { requestsPerSecond = 10, burstSize = 20, minDelayMs = 50 } = options;
     this.refillRate = requestsPerSecond / 1e3;
     this.maxTokens = burstSize;
     this.minDelayMs = minDelayMs;
   }
-  /**
-   * Check if a request can be made for the given key
-   * 
-   * @param key - The key to rate limit (e.g., tenantId, 'global')
-   * @returns true if request can proceed, false if rate limited
-   */
   tryAcquire(key = "global") {
     const now = Date.now();
     let bucket = this.buckets.get(key);
@@ -463,8 +343,7 @@ var RateLimiter = class {
       this.buckets.set(key, bucket);
     }
     const timePassed = now - bucket.lastRefill;
-    const tokensToAdd = timePassed * this.refillRate;
-    bucket.tokens = Math.min(this.maxTokens, bucket.tokens + tokensToAdd);
+    bucket.tokens = Math.min(this.maxTokens, bucket.tokens + timePassed * this.refillRate);
     bucket.lastRefill = now;
     if (bucket.tokens >= 1) {
       bucket.tokens -= 1;
@@ -474,14 +353,6 @@ var RateLimiter = class {
     logger.warn(`[SDK_RATE_LIMIT] Request blocked for key '${key}'. Wait ${waitTimeMs}ms. Tokens: ${bucket.tokens.toFixed(2)}`);
     return false;
   }
-  /**
-   * Wait until a request can be made for the given key
-   * 
-   * @param key - The key to rate limit
-   * @param maxWaitMs - Maximum time to wait in milliseconds (default: 5000)
-   * @returns Promise that resolves when request can proceed
-   * @throws Error if max wait time is exceeded
-   */
   async waitForToken(key = "global", maxWaitMs = 5e3) {
     const startTime = Date.now();
     while (!this.tryAcquire(key)) {
@@ -490,47 +361,21 @@ var RateLimiter = class {
         logger.error(`[SDK_RATE_LIMIT] Wait timeout after ${maxWaitMs}ms for key '${key}'`, new Error("Rate limit timeout"));
         throw new Error(`Rate limit wait timeout after ${maxWaitMs}ms for key '${key}'`);
       }
-      const waitTime = Math.min(this.minDelayMs, maxWaitMs - elapsed);
-      await new Promise((resolve) => {
-        setTimeout(resolve, waitTime);
-      });
+      await new Promise((resolve) => setTimeout(resolve, Math.min(this.minDelayMs, maxWaitMs - elapsed)));
     }
   }
-  /**
-   * Execute a function with rate limiting
-   * 
-   * @param key - The key to rate limit
-   * @param fn - The async function to execute
-   * @returns The result of the function
-   */
   async execute(key, fn) {
     await this.waitForToken(key);
     return fn();
   }
-  /**
-   * Get current token count for a key (for monitoring/debugging)
-   */
   getTokens(key = "global") {
     const bucket = this.buckets.get(key);
     if (!bucket) return this.maxTokens;
-    const now = Date.now();
-    const timePassed = now - bucket.lastRefill;
-    const tokensToAdd = timePassed * this.refillRate;
-    return Math.min(this.maxTokens, bucket.tokens + tokensToAdd);
+    return Math.min(this.maxTokens, bucket.tokens + (Date.now() - bucket.lastRefill) * this.refillRate);
   }
-  /**
-   * Reset rate limit for a key
-   */
   reset(key) {
-    if (key) {
-      this.buckets.delete(key);
-    } else {
-      this.buckets.clear();
-    }
+    key ? this.buckets.delete(key) : this.buckets.clear();
   }
-  /**
-   * Get the number of keys being tracked
-   */
   getTrackedKeysCount() {
     return this.buckets.size;
   }
@@ -544,13 +389,20 @@ function createRateLimiter(options) {
   return new RateLimiter(options);
 }
 
-// src/utils/circuitBreaker.ts
+// src/utils/circuitBreakerTypes.ts
 var CircuitState = /* @__PURE__ */ ((CircuitState2) => {
   CircuitState2["CLOSED"] = "CLOSED";
   CircuitState2["OPEN"] = "OPEN";
   CircuitState2["HALF_OPEN"] = "HALF_OPEN";
   return CircuitState2;
 })(CircuitState || {});
+
+// src/utils/createCircuitBreaker.ts
+function createCircuitBreaker(options = {}) {
+  return new CircuitBreaker(options);
+}
+
+// src/utils/circuitBreaker.ts
 var CircuitBreaker = class {
   state = "CLOSED" /* CLOSED */;
   failureCount = 0;
@@ -560,30 +412,13 @@ var CircuitBreaker = class {
   resetTimeoutMs;
   halfOpenMaxAttempts;
   name;
-  /**
-   * Create a new CircuitBreaker
-   * 
-   * @param options Configuration options
-   * @param options.failureThreshold - Number of failures before opening circuit (default: 5)
-   * @param options.resetTimeoutMs - Time in ms before attempting recovery (default: 30000 = 30s)
-   * @param options.halfOpenMaxAttempts - Successful attempts needed to close circuit (default: 3)
-   * @param options.name - Name for logging (default: 'idp')
-   */
   constructor(options = {}) {
-    const {
-      failureThreshold = 5,
-      resetTimeoutMs = 3e4,
-      halfOpenMaxAttempts = 3,
-      name = "idp"
-    } = options;
+    const { failureThreshold = 5, resetTimeoutMs = 3e4, halfOpenMaxAttempts = 3, name = "idp" } = options;
     this.failureThreshold = failureThreshold;
     this.resetTimeoutMs = resetTimeoutMs;
     this.halfOpenMaxAttempts = halfOpenMaxAttempts;
     this.name = name;
   }
-  /**
-   * Check if circuit allows requests
-   */
   canExecute() {
     switch (this.state) {
       case "CLOSED" /* CLOSED */:
@@ -602,15 +437,10 @@ var CircuitBreaker = class {
         return true;
     }
   }
-  /**
-   * Record a successful request
-   */
   recordSuccess() {
     switch (this.state) {
       case "CLOSED" /* CLOSED */:
-        if (this.failureCount > 0) {
-          this.failureCount = 0;
-        }
+        if (this.failureCount > 0) this.failureCount = 0;
         break;
       case "HALF_OPEN" /* HALF_OPEN */:
         this.halfOpenSuccesses++;
@@ -625,9 +455,6 @@ var CircuitBreaker = class {
         break;
     }
   }
-  /**
-   * Record a failed request
-   */
   recordFailure() {
     this.lastFailureTime = Date.now();
     switch (this.state) {
@@ -646,49 +473,25 @@ var CircuitBreaker = class {
         break;
     }
   }
-  /**
-   * Get current circuit state
-   */
   getState() {
     return this.state;
   }
-  /**
-   * Get failure count
-   */
   getFailureCount() {
     return this.failureCount;
   }
-  /**
-   * Check if circuit is open (failing fast)
-   */
   isOpen() {
     return this.state === "OPEN" /* OPEN */;
   }
-  /**
-   * Check if circuit is closed (normal operation)
-   */
   isClosed() {
     return this.state === "CLOSED" /* CLOSED */;
   }
-  /**
-   * Check if circuit is half-open (testing recovery)
-   */
   isHalfOpen() {
     return this.state === "HALF_OPEN" /* HALF_OPEN */;
   }
-  /**
-   * Get time until next retry attempt (ms)
-   */
   getTimeUntilRetry() {
-    if (this.state !== "OPEN" /* OPEN */) {
-      return 0;
-    }
-    const elapsed = Date.now() - this.lastFailureTime;
-    return Math.max(0, this.resetTimeoutMs - elapsed);
+    if (this.state !== "OPEN" /* OPEN */) return 0;
+    return Math.max(0, this.resetTimeoutMs - (Date.now() - this.lastFailureTime));
   }
-  /**
-   * Force reset the circuit to closed state
-   */
   reset() {
     this.state = "CLOSED" /* CLOSED */;
     this.failureCount = 0;
@@ -696,17 +499,11 @@ var CircuitBreaker = class {
     this.lastFailureTime = 0;
     logger.info(`[SDK_CIRCUIT_BREAKER] [${this.name}] Circuit manually reset to CLOSED`);
   }
-  /**
-   * Force open the circuit
-   */
   trip() {
     this.state = "OPEN" /* OPEN */;
     this.lastFailureTime = Date.now();
     logger.warn(`[SDK_CIRCUIT_BREAKER] [${this.name}] Circuit manually tripped to OPEN`);
   }
-  /**
-   * Get a status object for monitoring
-   */
   getStatus() {
     return {
       state: this.state,
@@ -718,27 +515,16 @@ var CircuitBreaker = class {
     };
   }
 };
-var idpCircuitBreaker = new CircuitBreaker({
-  failureThreshold: 5,
-  resetTimeoutMs: 3e4,
-  halfOpenMaxAttempts: 3,
-  name: "idp"
-});
-function createCircuitBreaker(options = {}) {
-  return new CircuitBreaker(options);
-}
+var idpCircuitBreaker = new CircuitBreaker({ failureThreshold: 5, resetTimeoutMs: 3e4, halfOpenMaxAttempts: 3, name: "idp" });
 
-// src/proxy.ts
+// src/utils/fetch-with-retry.ts
 async function fetchWithRetry(url, options = {}, maxAttempts = 4, baseDelayMs = 100, maxDelayMs = 5e3) {
   let lastError = null;
   let circuitRecorded = false;
   if (!idpCircuitBreaker.canExecute()) {
     const waitTime = idpCircuitBreaker.getTimeUntilRetry();
     logger.warn(`[SDK_CIRCUIT_BREAKER] Circuit is OPEN. Request blocked. Retry in ${waitTime}ms.`);
-    return {
-      ok: false,
-      error: `Circuit breaker is open. IdP unavailable. Retry in ${Math.ceil(waitTime / 1e3)}s.`
-    };
+    return { ok: false, error: `Circuit breaker is open. IdP unavailable. Retry in ${Math.ceil(waitTime / 1e3)}s.` };
   }
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -791,6 +577,8 @@ async function fetchWithRetry(url, options = {}, maxAttempts = 4, baseDelayMs = 
   logger.error(`[SDK_RETRY] All ${maxAttempts} attempts failed. Last error`, lastError);
   return { ok: false, error: lastError?.message };
 }
+
+// src/utils/idp-resolver.ts
 async function resolveTenant(subdomain, providerUrl) {
   try {
     const url = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
@@ -805,24 +593,14 @@ async function resolveTenant(subdomain, providerUrl) {
   }
   return null;
 }
-var debugLog = (msg, meta) => {
-  if (process.env.NODE_ENV !== "production") {
-    logger.debug(msg, meta);
-  }
-};
 async function verifySessionExpiry(email, sessionId, tokenIat, requestUrl, providerUrl, clientSecret) {
   try {
     const verifyUrl = new URL(`${providerUrl}/api/auth/session/verify`, requestUrl);
     verifyUrl.searchParams.set("email", email);
-    if (sessionId) {
-      verifyUrl.searchParams.set("sessionId", sessionId);
-    }
+    if (sessionId) verifyUrl.searchParams.set("sessionId", sessionId);
     const result = await fetchWithRetry(verifyUrl.toString(), {
       method: "GET",
-      headers: {
-        "Authorization": `Bearer ${clientSecret}`,
-        "Content-Type": "application/json"
-      },
+      headers: { "Authorization": `Bearer ${clientSecret}`, "Content-Type": "application/json" },
       next: { revalidate: 0 }
     }, 3, 100);
     if (result.ok && result.data) {
@@ -830,8 +608,7 @@ async function verifySessionExpiry(email, sessionId, tokenIat, requestUrl, provi
       return parsed.active;
     } else {
       const isWithin24h = Date.now() / 1e3 - tokenIat < 86400;
-      const status = result.status || 0;
-      logger.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${status}. Fallback (24h rule): ${isWithin24h}`);
+      logger.warn(`[SDK_SESSION_VERIFY_WARNING] Central IdP returned status ${result.status || 0}. Fallback (24h rule): ${isWithin24h}`);
       return isWithin24h;
     }
   } catch (err) {
@@ -840,19 +617,23 @@ async function verifySessionExpiry(email, sessionId, tokenIat, requestUrl, provi
     return isWithin24h;
   }
 }
+
+// src/proxy.ts
+var debugLog = (msg, meta) => {
+  if (process.env.NODE_ENV !== "production") logger.debug(msg, meta);
+};
 function withIndustrialAuth(options) {
   const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || "https://abd-auth.vercel.app";
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || "";
-  const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET || "";
+  const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
+  if (!jwtSecret) throw new Error("[SDK] AUTH_JWT_SECRET is required for JWT verification.");
   const cookieName = options.cookieName || "abd_session";
   const verifiedCookieName = options.verifiedCookieName || "abd_session_verified";
   const publicPaths = options.publicPaths || ["/", "/logout-success"];
   return async function middleware(request) {
     const { pathname } = request.nextUrl;
-    const isAsset = pathname.includes(".") || pathname.startsWith("/_next") || pathname.startsWith("/api/") || pathname === "/favicon.ico";
-    if (isAsset) {
+    if (pathname.includes(".") || pathname.startsWith("/_next") || pathname.startsWith("/api/") || pathname === "/favicon.ico")
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
-    }
     const host = request.headers.get("host");
     const subdomain = getTenantSubdomain(host);
     let tenantInfo = null;
@@ -860,117 +641,67 @@ function withIndustrialAuth(options) {
       tenantInfo = await resolveTenant(subdomain, providerUrl);
       if (!tenantInfo || !tenantInfo.active) {
         const baseAppUrl = options.baseAppUrl || process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-        debugLog(`[SDK_PROXY] [${options.appId}] Tenant inactive or not found: ${subdomain}`);
+        debugLog(`[SDK_PROXY] [${options.appId}] Tenant not found: ${subdomain}`);
         return NextResponse.redirect(new URL(`${baseAppUrl}/logout-success?error=tenant_not_found`));
       }
     }
     const getUnlocalizedPath = (path) => {
       const parts = path.split("/");
-      if (parts.length > 1 && parts[1].length === 2) {
-        return "/" + parts.slice(2).join("/");
-      }
-      return path;
+      return parts.length > 1 && parts[1].length === 2 ? "/" + parts.slice(2).join("/") : path;
     };
     const unlocalizedPath = getUnlocalizedPath(pathname);
     const isPublic = publicPaths.some((p) => {
       const normalizedPath = unlocalizedPath.replace(/\/$/, "") || "/";
       const normalizedParam = p.replace(/\/$/, "") || "/";
-      if (normalizedParam === "/") {
-        return normalizedPath === "/";
-      }
+      if (normalizedParam === "/") return normalizedPath === "/";
       return normalizedPath === normalizedParam || normalizedPath.startsWith(normalizedParam + "/");
     });
     const sessionCookie = request.cookies.get(cookieName);
-    debugLog(`[SDK_PROXY] [${options.appId}] Session cookie '${cookieName}': ${sessionCookie?.value ? "PRESENT" : "MISSING"}`);
-    let isAuthenticated = false;
-    let isAppNotAllowed = false;
-    let didVerifyThisRequest = false;
-    let userEmail = "";
-    let userRole = "";
-    let userTenantId = "";
-    let userSessionId = "";
+    debugLog(`[SDK_PROXY] [${options.appId}] Session cookie: ${sessionCookie?.value ? "PRESENT" : "MISSING"}`);
+    let isAuthenticated = false, isAppNotAllowed = false, didVerifyThisRequest = false;
+    let userEmail = "", userRole = "", userTenantId = "", userSessionId = "";
     let userTokenIat = 0;
     if (sessionCookie?.value) {
-      debugLog(`[SDK_PROXY] [${options.appId}] Verifying token using secret prefix: ${jwtSecret ? jwtSecret.substring(0, 10) + "..." : "undefined"}`);
       const payload = await verifyToken(sessionCookie.value, jwtSecret);
       if (payload) {
-        debugLog(`[SDK_PROXY] [${options.appId}] Token verified for tenant: ${payload.tenantId}`);
         isAuthenticated = true;
         userEmail = payload.email;
         userRole = payload.role;
         userTenantId = payload.tenantId;
         userSessionId = payload.sessionId || "";
         userTokenIat = payload.iat || Math.floor(Date.now() / 1e3);
-        if (payload.allowedApps && userRole !== "SUPER_ADMIN") {
-          if (!payload.allowedApps.includes(options.appId)) {
-            debugLog(`[SDK_AUTH_BLOCKED] User allowedApps does not include '${options.appId}'`);
-            isAuthenticated = false;
-            isAppNotAllowed = true;
-          }
-        }
-      } else {
-        debugLog(`[SDK_PROXY] [${options.appId}] Token verification failed (returned null)`);
-      }
-    }
-    if (isAuthenticated && tenantInfo && userTenantId !== tenantInfo.tenantId) {
-      debugLog(`[SDK_CROSS_TENANT_SECURITY_BLOCKED] User tenant '${userTenantId}' does not match host tenant '${tenantInfo.tenantId}'`);
-      isAuthenticated = false;
-    }
-    if (isAuthenticated && tenantInfo && tenantInfo.allowedApps && userRole !== "SUPER_ADMIN") {
-      if (!tenantInfo.allowedApps.includes(options.appId)) {
-        debugLog(`[SDK_TENANT_BLOCKED] Tenant '${tenantInfo.tenantId}' allowedApps does not include '${options.appId}'`);
-        isAuthenticated = false;
-        isAppNotAllowed = true;
-      }
-    }
-    if (isAuthenticated && sessionCookie && userEmail) {
-      const verifiedCookie = request.cookies.get(verifiedCookieName);
-      debugLog(`[SDK_PROXY] [${options.appId}] Verified cookie '${verifiedCookieName}': ${verifiedCookie?.value ? "PRESENT" : "MISSING"}`);
-      if (!verifiedCookie) {
-        debugLog(`[SDK_PROXY] [${options.appId}] Contacting IdP to verify session expiry.`);
-        const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, userTokenIat, request.url, providerUrl, clientSecret);
-        debugLog(`[SDK_PROXY] [${options.appId}] Central session active: ${isSessionActive}`);
-        if (isSessionActive) {
-          didVerifyThisRequest = true;
-        } else {
-          debugLog(`[SDK_SESSION_EXPIRED] User session is inactive at central IdP`);
+        if (payload.allowedApps && userRole !== "SUPER_ADMIN" && !payload.allowedApps.includes(options.appId)) {
           isAuthenticated = false;
+          isAppNotAllowed = true;
         }
       }
     }
-    if (isPublic && !isAuthenticated) {
-      debugLog(`[SDK_PROXY] [${options.appId}] Unauthenticated request to public path '${pathname}'. Bypassing.`);
-      return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
+    if (isAuthenticated && tenantInfo && userTenantId !== tenantInfo.tenantId) isAuthenticated = false;
+    if (isAuthenticated && tenantInfo && tenantInfo.allowedApps && userRole !== "SUPER_ADMIN" && !tenantInfo.allowedApps.includes(options.appId)) {
+      isAuthenticated = false;
+      isAppNotAllowed = true;
     }
+    if (isAuthenticated && sessionCookie && userEmail && !request.cookies.get(verifiedCookieName)) {
+      const isSessionActive = await verifySessionExpiry(userEmail, userSessionId, userTokenIat, request.url, providerUrl, clientSecret);
+      if (isSessionActive) didVerifyThisRequest = true;
+      else isAuthenticated = false;
+    }
+    if (isPublic && !isAuthenticated) return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
     if (!isAuthenticated) {
       const currentUrl = new URL(request.url);
-      const dynamicAppUrl = `${currentUrl.protocol}//${currentUrl.host}`;
       const authorizeUrl = new URL(`${providerUrl}/api/auth/federated/authorize`, request.url);
       authorizeUrl.searchParams.set("client_id", options.clientId);
-      authorizeUrl.searchParams.set("redirect_uri", `${dynamicAppUrl}/api/auth/federated/callback`);
+      authorizeUrl.searchParams.set("redirect_uri", `${currentUrl.protocol}//${currentUrl.host}/api/auth/federated/callback`);
       authorizeUrl.searchParams.set("state", pathname);
-      if (isAppNotAllowed) {
-        authorizeUrl.searchParams.set("error", "app_not_allowed");
-      }
-      if (tenantInfo) {
-        authorizeUrl.searchParams.set("tenant", tenantInfo.tenantId);
-      }
-      debugLog(`[SDK_PROXY] [${options.appId}] Redirecting unauthorized user to IdP.`);
+      if (isAppNotAllowed) authorizeUrl.searchParams.set("error", "app_not_allowed");
+      if (tenantInfo) authorizeUrl.searchParams.set("tenant", tenantInfo.tenantId);
       const response2 = NextResponse.redirect(authorizeUrl);
       response2.cookies.set(cookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
       response2.cookies.set(verifiedCookieName, "", { path: "/", maxAge: 0, expires: /* @__PURE__ */ new Date(0) });
       return response2;
     }
     const response = options.intlMiddleware ? await options.intlMiddleware(request) : NextResponse.next();
-    if (didVerifyThisRequest) {
-      response.cookies.set(verifiedCookieName, "1", {
-        path: "/",
-        maxAge: 60,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax"
-      });
-    }
+    if (didVerifyThisRequest) response.cookies.set(verifiedCookieName, "1", { path: "/", maxAge: 60, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
     return response;
   };
 }
@@ -1041,6 +772,206 @@ async function ensureIndustrialAccess(requiredRole, customSecret) {
   return session.user;
 }
 
+// src/utils/tenant-resolver.ts
+import mongoose3 from "mongoose";
+
+// src/utils/mongodb.ts
+import mongoose2 from "mongoose";
+
+// src/db/tenant-context.ts
+import { AsyncLocalStorage } from "async_hooks";
+var tenantStorage = new AsyncLocalStorage();
+
+// src/db/tenant-connection.ts
+import mongoose from "mongoose";
+var g = global;
+if (!g.tenantConnections) g.tenantConnections = {};
+var connectionPool = g.tenantConnections;
+function resolveTenantUri(baseUri, dbName) {
+  const protocolMatch = baseUri.match(/^mongodb(?:\+srv)?:\/\//);
+  if (!protocolMatch) throw new Error("Invalid MONGODB_URI protocol");
+  const protocol = protocolMatch[0];
+  const remaining = baseUri.substring(protocol.length);
+  const qIndex = remaining.indexOf("?");
+  const hostAndDb = qIndex === -1 ? remaining : remaining.substring(0, qIndex);
+  const options = qIndex === -1 ? "" : remaining.substring(qIndex);
+  const slashIndex = hostAndDb.lastIndexOf("/");
+  if (slashIndex === -1) return `${protocol}${hostAndDb}/${dbName}${options}`;
+  return `${protocol}${hostAndDb.substring(0, slashIndex)}/${dbName}${options}`;
+}
+function getTenantConnection(dbPrefix, isolationStrategy) {
+  const cacheKey = isolationStrategy === "DATABASE_PER_TENANT" ? `DB_PER_TENANT:${dbPrefix}` : `COLL_PREFIX:${dbPrefix}`;
+  if (connectionPool[cacheKey]) {
+    connectionPool[cacheKey].lastUsed = Date.now();
+    return connectionPool[cacheKey].connection;
+  }
+  const keys = Object.keys(connectionPool);
+  if (keys.length >= 15) {
+    let oldestKey = "", oldestTime = Infinity;
+    for (const key of keys) {
+      if (connectionPool[key].lastUsed < oldestTime) {
+        oldestTime = connectionPool[key].lastUsed;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey) {
+      const evicted = connectionPool[oldestKey];
+      delete connectionPool[oldestKey];
+      if (process.env.NODE_ENV !== "production") console.log(`[MultiTenant] Evicting LRU connection: ${oldestKey}`);
+      evicted.connection.close().catch((err) => console.error(`[MultiTenant] Error closing evicted connection ${oldestKey}:`, err));
+    }
+  }
+  const baseUri = process.env.MONGODB_URI || "";
+  if (!baseUri) throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  let targetUri = baseUri;
+  if (isolationStrategy === "DATABASE_PER_TENANT") targetUri = resolveTenantUri(baseUri, `abd_tenant_${dbPrefix}`);
+  if (process.env.NODE_ENV !== "production") console.log(`[MultiTenant] Creating connection for ${cacheKey} (Strategy: ${isolationStrategy})`);
+  const opts2 = { bufferCommands: false, maxPoolSize: 3, serverSelectionTimeoutMS: 5e3, socketTimeoutMS: 45e3 };
+  const conn = mongoose.createConnection(targetUri, opts2);
+  conn.on("connected", () => {
+    if (process.env.NODE_ENV !== "production") console.log(`[MultiTenant] Connection established for ${cacheKey}`);
+  });
+  conn.on("error", (err) => console.error(`[MultiTenant] Connection error for ${cacheKey}:`, err));
+  connectionPool[cacheKey] = { connection: conn, lastUsed: Date.now() };
+  return conn;
+}
+async function ensureConnectionReady(conn) {
+  if (conn.readyState === 1) return conn;
+  if (conn.readyState === 2) {
+    await new Promise((resolve, reject) => {
+      const onConnected = () => {
+        conn.removeListener("error", onError);
+        resolve();
+      };
+      const onError = (err) => {
+        conn.removeListener("connected", onConnected);
+        reject(err);
+      };
+      conn.once("connected", onConnected);
+      conn.once("error", onError);
+    });
+    return conn;
+  }
+  await conn.asPromise();
+  return conn;
+}
+
+// src/utils/mongodb.ts
+var g2 = global;
+var cached = g2.__mongoose || { conn: null, promise: null, authConn: null, authPromise: null, logsConn: null, logsPromise: null };
+if (!g2.__mongoose) g2.__mongoose = cached;
+var opts = { bufferCommands: false, maxPoolSize: 10, serverSelectionTimeoutMS: 5e3, socketTimeoutMS: 45e3 };
+async function connectDB(serviceName) {
+  const MONGODB_URI = process.env.MONGODB_URI || "";
+  if (!MONGODB_URI) throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+  if (cached.conn) return cached.conn;
+  if (!cached.promise) {
+    cached.promise = mongoose2.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+      if (process.env.NODE_ENV !== "production") console.log(`[DEV] ${serviceName || process.env.NEXT_PUBLIC_APP_ID || "satellite-app"} MongoDB connected to DATA Cluster`);
+      return mongooseInstance;
+    });
+  }
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+  const store = tenantStorage.getStore();
+  if (store) {
+    try {
+      await ensureConnectionReady(getTenantConnection(store.dbPrefix, store.isolationStrategy));
+    } catch (e) {
+      console.error(`[MultiTenant] Failed to connect to tenant database for ${store.dbPrefix}:`, e);
+      throw e;
+    }
+  }
+  return cached.conn;
+}
+async function connectCluster(key, URI, cacheKey, promiseKey, label) {
+  if (cached[cacheKey]) return cached[cacheKey];
+  if (!cached[promiseKey]) {
+    const conn = mongoose2.createConnection(URI, opts);
+    cached[promiseKey] = ensureConnectionReady(conn).then(() => {
+      if (process.env.NODE_ENV !== "production") console.log(`[DEV] MongoDB connected to ${label} Cluster`);
+      return conn;
+    });
+  }
+  try {
+    cached[cacheKey] = await cached[promiseKey];
+  } catch (e) {
+    cached[promiseKey] = null;
+    throw e;
+  }
+  return cached[cacheKey];
+}
+async function connectAuthDB(serviceName) {
+  return connectCluster("auth", process.env.MONGODB_AUTH_URI || process.env.MONGODB_URI || "", "authConn", "authPromise", "AUTH");
+}
+async function connectLogsDB(serviceName) {
+  return connectCluster("logs", process.env.MONGODB_LOGS_URI || process.env.MONGODB_URI || "", "logsConn", "logsPromise", "LOGS");
+}
+function getConnectionSync(cacheKey, promiseKey, envVar, label) {
+  if (cached[cacheKey]) return cached[cacheKey];
+  const URI = process.env[envVar] || process.env.MONGODB_URI || "";
+  if (!URI) throw new Error(`Missing ${envVar} or MONGODB_URI`);
+  if (!cached[promiseKey]) {
+    const conn = mongoose2.createConnection(URI, opts);
+    cached[cacheKey] = conn;
+    cached[promiseKey] = ensureConnectionReady(conn).then(() => {
+      if (process.env.NODE_ENV !== "production") console.log(`[DEV] MongoDB connected to ${label} Cluster`);
+      return conn;
+    });
+  }
+  return cached[cacheKey];
+}
+function getAuthConnectionSync() {
+  return getConnectionSync("authConn", "authPromise", "MONGODB_AUTH_URI", "AUTH");
+}
+function getLogsConnectionSync() {
+  return getConnectionSync("logsConn", "logsPromise", "MONGODB_LOGS_URI", "LOGS");
+}
+var mongodb_default = connectDB;
+
+// src/utils/tenant-resolver.ts
+async function resolveTargetTenantContext(tenantId) {
+  if (!tenantId || tenantId.trim() === "") {
+    return void 0;
+  }
+  await connectDB();
+  const conn = mongoose3.connection;
+  if (conn.readyState !== 1) {
+    console.warn("[TenantResolver] Default connection not ready, cannot resolve tenant");
+    return void 0;
+  }
+  const authDbName = process.env.MONGODB_AUTH_DB || "ABDElevators-Auth";
+  try {
+    const authDb = conn.useDb(authDbName, { useCache: true });
+    const tenantsCol = authDb.collection("tenants");
+    const tenant = await tenantsCol.findOne(
+      { tenantId, active: true },
+      { projection: { tenantId: 1, dbPrefix: 1, isolationStrategy: 1 } }
+    );
+    if (!tenant) {
+      console.warn(`[TenantResolver] Target tenant not found or inactive: ${tenantId}`);
+      return void 0;
+    }
+    const resolved = {
+      tenantId: tenant.tenantId,
+      dbPrefix: tenant.dbPrefix || "default",
+      isolationStrategy: tenant.isolationStrategy || "COLLECTION_PREFIX"
+    };
+    console.log(
+      `[TenantResolver] Resolved context for tenant "${tenantId}":`,
+      JSON.stringify(resolved)
+    );
+    return resolved;
+  } catch (error) {
+    console.error(`[TenantResolver] Failed to resolve tenant context for "${tenantId}":`, error);
+    return void 0;
+  }
+}
+
 // src/styles/BrandingStyles.tsx
 import { headers } from "next/headers";
 import { generateTenantCss } from "@ajabadia/styles";
@@ -1091,6 +1022,10 @@ async function BrandingStyles({
 // src/routeHandler.ts
 import { NextResponse as NextResponse2 } from "next/server";
 function createAuthRouteHandler(options) {
+  const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error("[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.");
+  }
   const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || "https://abd-auth.vercel.app";
   const clientId = options.clientId;
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || "";
@@ -1099,7 +1034,7 @@ function createAuthRouteHandler(options) {
   return async function handler(request) {
     const { pathname, searchParams } = new URL(request.url);
     if (pathname.endsWith("/session")) {
-      const session = await getIndustrialSession(options.jwtSecret);
+      const session = await getIndustrialSession(jwtSecret);
       return NextResponse2.json(session);
     }
     if (pathname.endsWith("/logout")) {
@@ -1134,7 +1069,20 @@ function createAuthRouteHandler(options) {
     }
     if (pathname.endsWith("/federated/callback")) {
       const code = searchParams.get("code");
+      const token = searchParams.get("token");
       const state = searchParams.get("state") || "/";
+      if (token) {
+        const redirectResponse = NextResponse2.redirect(new URL(state, request.url));
+        redirectResponse.cookies.set(cookieName, token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 8
+          // 8-hour industrial shift
+        });
+        return redirectResponse;
+      }
       if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
         return NextResponse2.json({ error: "Invalid or missing authorization code" }, { status: 400 });
       }
@@ -1177,201 +1125,93 @@ function createAuthRouteHandler(options) {
   };
 }
 
-// src/db/tenant-context.ts
-import { AsyncLocalStorage } from "async_hooks";
-var tenantStorage = new AsyncLocalStorage();
-
-// src/db/tenant-connection.ts
-import mongoose from "mongoose";
-var globalWithTenantConnections = global;
-if (!globalWithTenantConnections.tenantConnections) {
-  globalWithTenantConnections.tenantConnections = {};
-}
-var connectionPool = globalWithTenantConnections.tenantConnections;
-function resolveTenantUri(baseUri, dbName) {
-  const protocolMatch = baseUri.match(/^mongodb(?:\+srv)?:\/\//);
-  if (!protocolMatch) {
-    throw new Error("Invalid MONGODB_URI protocol");
-  }
-  const protocol = protocolMatch[0];
-  const remaining = baseUri.substring(protocol.length);
-  const qIndex = remaining.indexOf("?");
-  const hostAndDb = qIndex === -1 ? remaining : remaining.substring(0, qIndex);
-  const options = qIndex === -1 ? "" : remaining.substring(qIndex);
-  const slashIndex = hostAndDb.lastIndexOf("/");
-  if (slashIndex === -1) {
-    return `${protocol}${hostAndDb}/${dbName}${options}`;
-  } else {
-    const hostPart = hostAndDb.substring(0, slashIndex);
-    return `${protocol}${hostPart}/${dbName}${options}`;
-  }
-}
-function getTenantConnection(dbPrefix, isolationStrategy) {
-  const cacheKey = isolationStrategy === "DATABASE_PER_TENANT" ? `DB_PER_TENANT:${dbPrefix}` : `COLL_PREFIX:${dbPrefix}`;
-  if (connectionPool[cacheKey]) {
-    connectionPool[cacheKey].lastUsed = Date.now();
-    return connectionPool[cacheKey].connection;
-  }
-  const keys = Object.keys(connectionPool);
-  if (keys.length >= 15) {
-    let oldestKey = "";
-    let oldestTime = Infinity;
-    for (const key of keys) {
-      if (connectionPool[key].lastUsed < oldestTime) {
-        oldestTime = connectionPool[key].lastUsed;
-        oldestKey = key;
-      }
-    }
-    if (oldestKey) {
-      const evicted = connectionPool[oldestKey];
-      delete connectionPool[oldestKey];
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[MultiTenant] Evicting LRU connection from cache: ${oldestKey}`);
-      }
-      evicted.connection.close().catch((err) => {
-        console.error(`[MultiTenant] Error closing evicted connection ${oldestKey}:`, err);
-      });
-    }
-  }
-  const baseUri = process.env.MONGODB_URI || "";
-  if (!baseUri) {
-    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
-  }
-  let targetUri = baseUri;
-  if (isolationStrategy === "DATABASE_PER_TENANT") {
-    const dbName = `abd_tenant_${dbPrefix}`;
-    targetUri = resolveTenantUri(baseUri, dbName);
-  }
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[MultiTenant] Creating connection for ${cacheKey} (Strategy: ${isolationStrategy})`);
-  }
-  const opts = {
-    bufferCommands: false,
-    maxPoolSize: 3,
-    serverSelectionTimeoutMS: 5e3,
-    socketTimeoutMS: 45e3
-  };
-  const conn = mongoose.createConnection(targetUri, opts);
-  conn.on("connected", () => {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[MultiTenant] Connection established for ${cacheKey}`);
-    }
-  });
-  conn.on("error", (err) => {
-    console.error(`[MultiTenant] Connection error for ${cacheKey}:`, err);
-  });
-  connectionPool[cacheKey] = {
-    connection: conn,
-    lastUsed: Date.now()
-  };
-  return conn;
-}
-async function ensureConnectionReady(conn) {
-  if (conn.readyState === 1) {
-    return conn;
-  }
-  if (conn.readyState === 2) {
-    await new Promise((resolve, reject) => {
-      const onConnected = () => {
-        conn.removeListener("error", onError);
-        resolve();
-      };
-      const onError = (err) => {
-        conn.removeListener("connected", onConnected);
-        reject(err);
-      };
-      conn.once("connected", onConnected);
-      conn.once("error", onError);
-    });
-    return conn;
-  }
-  await conn.asPromise();
-  return conn;
-}
+// src/events.ts
+var QuizEventAction = {
+  SPACE_LINK_CREATE: "QUIZ_SPACE_LINK_CREATE",
+  SPACE_LINK_UPDATE: "QUIZ_SPACE_LINK_UPDATE",
+  COURSE_CREATE: "QUIZ_COURSE_CREATE",
+  COURSE_UPDATE: "QUIZ_COURSE_UPDATE",
+  COURSE_DELETE: "QUIZ_COURSE_DELETE",
+  EXAM_CONFIG_CREATE: "QUIZ_EXAM_CONFIG_CREATE",
+  EXAM_CONFIG_UPDATE: "QUIZ_EXAM_CONFIG_UPDATE",
+  ASSIGNMENT_CREATE: "QUIZ_ASSIGNMENT_CREATE",
+  ASSIGNMENT_PUBLISH: "QUIZ_ASSIGNMENT_PUBLISHED",
+  ATTEMPT_STARTED: "QUIZ_ATTEMPT_STARTED",
+  ANSWER_SUBMITTED: "QUIZ_ANSWER_SUBMITTED",
+  ATTEMPT_COMPLETED: "QUIZ_ATTEMPT_COMPLETED",
+  ATTEMPT_TIMEOUT: "QUIZ_ATTEMPT_TIMEOUT",
+  ATTEMPT_MANUALLY_GRADED: "QUIZ_ATTEMPT_MANUALLY_GRADED",
+  ATTEMPT_INVALIDATED: "QUIZ_ATTEMPT_INVALIDATED",
+  ROLE_ASSIGNED: "QUIZ_ROLE_ASSIGNED",
+  ROLE_REVOKED: "QUIZ_ROLE_REVOKED"
+};
+var QuizEntityType = {
+  SPACE: "SPACE",
+  COURSE: "COURSE",
+  EXAM_CONFIG: "EXAM_CONFIG",
+  ASSIGNMENT: "ASSIGNMENT",
+  ATTEMPT: "ATTEMPT",
+  QUESTION: "QUESTION",
+  QUIZ_USER_ROLE: "QUIZ_USER_ROLE"
+};
 
 // src/db/tenant-model.ts
-import mongoose2 from "mongoose";
+import mongoose4 from "mongoose";
 async function withTenantContext(callback, explicitContext) {
   const activeStore = tenantStorage.getStore();
   if (activeStore) {
-    const conn = getTenantConnection(activeStore.dbPrefix, activeStore.isolationStrategy);
-    await ensureConnectionReady(conn);
+    await ensureConnectionReady(getTenantConnection(activeStore.dbPrefix, activeStore.isolationStrategy));
     return callback();
   }
   if (explicitContext) {
-    const conn = getTenantConnection(explicitContext.dbPrefix, explicitContext.isolationStrategy);
-    await ensureConnectionReady(conn);
+    await ensureConnectionReady(getTenantConnection(explicitContext.dbPrefix, explicitContext.isolationStrategy));
     return tenantStorage.run(explicitContext, callback);
   }
   try {
     const session = await getIndustrialSession();
     if (session?.authenticated && session.user?.tenantId) {
       const dbPrefix = session.user.dbPrefix || session.user.tenantId.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const context = {
-        tenantId: session.user.tenantId,
-        dbPrefix,
-        isolationStrategy: session.user.isolationStrategy || "COLLECTION_PREFIX"
-      };
-      const conn = getTenantConnection(context.dbPrefix, context.isolationStrategy);
-      await ensureConnectionReady(conn);
+      const context = { tenantId: session.user.tenantId, dbPrefix, isolationStrategy: session.user.isolationStrategy || "COLLECTION_PREFIX" };
+      await ensureConnectionReady(getTenantConnection(context.dbPrefix, context.isolationStrategy));
       return tenantStorage.run(context, callback);
     }
   } catch (err) {
-    console.warn("[TenantContext] Failed to get session or cookies:", err);
+    console.warn("[TenantContext] Failed to get session:", err);
   }
   return callback();
 }
 function compileModelOnConnection(conn, modelName, schema, collectionName) {
-  if (conn.models[modelName]) {
-    return conn.models[modelName];
-  }
+  if (conn.models[modelName]) return conn.models[modelName];
   return conn.model(modelName, schema, collectionName);
 }
 function getModelForTenant(dbPrefix, isolationStrategy, modelName, schema, defaultCollectionName) {
   const conn = getTenantConnection(dbPrefix, isolationStrategy);
-  let collectionName = defaultCollectionName;
-  if (isolationStrategy === "COLLECTION_PREFIX") {
-    collectionName = `${dbPrefix}_${defaultCollectionName}`;
-  }
+  const collectionName = isolationStrategy === "COLLECTION_PREFIX" ? `${dbPrefix}_${defaultCollectionName}` : defaultCollectionName;
   return compileModelOnConnection(conn, modelName, schema, collectionName);
 }
 function getTenantModel(modelName, schema) {
-  const defaultModel = mongoose2.models[modelName] || mongoose2.model(modelName, schema);
+  const defaultModel = mongoose4.models[modelName] || mongoose4.model(modelName, schema);
   const defaultCollectionName = defaultModel.collection.name;
   return new Proxy(defaultModel, {
     get(target, prop, receiver) {
       const store = tenantStorage.getStore();
-      if (!store) {
-        return Reflect.get(target, prop, receiver);
-      }
-      const tenantModel = getModelForTenant(
-        store.dbPrefix,
-        store.isolationStrategy,
-        modelName,
-        schema,
-        defaultCollectionName
-      );
+      if (!store) return Reflect.get(target, prop, receiver);
+      const tenantModel = getModelForTenant(store.dbPrefix, store.isolationStrategy, modelName, schema, defaultCollectionName);
       const value = Reflect.get(tenantModel, prop);
-      if (typeof value === "function") {
-        return value.bind(tenantModel);
-      }
-      return value;
+      return typeof value === "function" ? value.bind(tenantModel) : value;
     },
     construct(target, args, newTarget) {
       const store = tenantStorage.getStore();
-      if (!store) {
-        return Reflect.construct(target, args, newTarget);
-      }
-      const tenantModel = getModelForTenant(
-        store.dbPrefix,
-        store.isolationStrategy,
-        modelName,
-        schema,
-        defaultCollectionName
-      );
+      if (!store) return Reflect.construct(target, args, newTarget);
+      const tenantModel = getModelForTenant(store.dbPrefix, store.isolationStrategy, modelName, schema, defaultCollectionName);
       return Reflect.construct(tenantModel, args, newTarget);
     }
   });
+}
+function getGlobalModel(modelName, schema, clusterTarget) {
+  const conn = clusterTarget === "AUTH" ? getAuthConnectionSync() : getLogsConnectionSync();
+  if (conn.models[modelName]) return conn.models[modelName];
+  return conn.model(modelName, schema);
 }
 
 // src/utils/cloudinary.ts
@@ -1419,6 +1259,115 @@ async function deleteCloudinaryAsset(publicId) {
   }
 }
 
+// src/utils/branding/color-utils.ts
+function adjustColor(hex, percent) {
+  if (!hex || !hex.startsWith("#")) return hex;
+  try {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 255) + amt;
+    const B = (num & 255) + amt;
+    const clamp = (val) => val < 255 ? val < 0 ? 0 : val : 255;
+    return "#" + (16777216 + clamp(R) * 65536 + clamp(G) * 256 + clamp(B)).toString(16).slice(1);
+  } catch (e) {
+    return hex;
+  }
+}
+function getContrastColor(hexcolor) {
+  if (!hexcolor || !hexcolor.startsWith("#")) return "#ffffff";
+  try {
+    const r = parseInt(hexcolor.substring(1, 3), 16);
+    const g3 = parseInt(hexcolor.substring(3, 5), 16);
+    const b = parseInt(hexcolor.substring(5, 7), 16);
+    const yiq = (r * 299 + g3 * 587 + b * 114) / 1e3;
+    return yiq >= 128 ? "#000000" : "#ffffff";
+  } catch (e) {
+    return "#ffffff";
+  }
+}
+function hexToHslComponents(hex) {
+  if (!hex || !hex.startsWith("#")) return "";
+  try {
+    const r = parseInt(hex.substring(1, 3), 16) / 255;
+    const g3 = parseInt(hex.substring(3, 5), 16) / 255;
+    const b = parseInt(hex.substring(5, 7), 16) / 255;
+    const max = Math.max(r, g3, b);
+    const min = Math.min(r, g3, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r:
+          h = (g3 - b) / d + (g3 < b ? 6 : 0);
+          break;
+        case g3:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g3) / d + 4;
+          break;
+      }
+      h /= 6;
+    }
+    const hDeg = Math.round(h * 360);
+    const sPct = Math.round(s * 100);
+    const lPct = Math.round(l * 100);
+    return `${hDeg} ${sPct}% ${lPct}%`;
+  } catch (e) {
+    return "";
+  }
+}
+
+// src/utils/branding/css-generator.ts
+function generateTenantCss2(theme) {
+  if (!theme || !theme.primary) return "";
+  const primary = theme.primary;
+  const primaryFg = getContrastColor(primary);
+  const secondary = theme.secondary || "#1e293b";
+  const secondaryFg = getContrastColor(secondary);
+  const accent = theme.accent || primary;
+  const accentFg = getContrastColor(accent);
+  const autoDark = theme.autoDarkMode !== false;
+  const primaryDark = theme.primaryDark || (autoDark ? adjustColor(primary, 25) : "#38bdf8");
+  const primaryDarkFg = getContrastColor(primaryDark);
+  const accentDark = theme.accentDark || (autoDark ? adjustColor(accent, 15) : "#60a5fa");
+  const accentDarkFg = getContrastColor(accentDark);
+  const radius = theme.rounded === false ? "0rem" : theme.radius || "0.75rem";
+  return `
+    :root {
+      --primary: ${primary};
+      --primary-foreground: ${primaryFg};
+      --secondary: ${secondary};
+      --secondary-foreground: ${secondaryFg};
+      --accent: ${accent};
+      --accent-foreground: ${accentFg};
+      --sidebar-primary: ${primary};
+      --sidebar-primary-foreground: ${primaryFg};
+      --ring: ${primary};
+      --radius: ${radius};
+      --tenant-primary: ${primary}; /* Retrocompatibilidad sat\xE9lite */
+    }
+    .dark {
+      --primary: ${primaryDark};
+      --primary-foreground: ${primaryDarkFg};
+      --accent: ${accentDark};
+      --accent-foreground: ${accentDarkFg};
+      --sidebar-primary: ${primaryDark};
+      --sidebar-primary-foreground: ${primaryDarkFg};
+      --ring: ${primaryDark};
+      --tenant-primary: ${primaryDark};
+    }
+    /* Estilos forzados de clases base */
+    .text-primary { color: var(--primary) !important; }
+    .bg-primary { background-color: var(--primary) !important; }
+    .border-primary { border-color: var(--primary) !important; }
+  `;
+}
+
 // src/utils/crypto-chain.ts
 import crypto from "crypto";
 import stringify from "fast-json-stable-stringify";
@@ -1450,55 +1399,93 @@ async function resolveTenantBranding() {
   }
 }
 
-// src/utils/mongodb.ts
-import mongoose3 from "mongoose";
-var globalWithMongoose = global;
-var cached = globalWithMongoose.__mongoose || { conn: null, promise: null };
-if (!globalWithMongoose.__mongoose) {
-  globalWithMongoose.__mongoose = cached;
-}
-async function connectDB(serviceName) {
-  const MONGODB_URI = process.env.MONGODB_URI || "";
-  if (!MONGODB_URI) {
-    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+// src/utils/security.ts
+import crypto2 from "crypto";
+var ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
+var SecurityService = class {
+  static getSecret() {
+    if (!ENCRYPTION_SECRET) {
+      throw new Error("ENCRYPTION_SECRET no est\xE1 definida en las variables de entorno.");
+    }
+    return crypto2.scryptSync(ENCRYPTION_SECRET, "salt", 32);
   }
-  if (cached.conn) {
-    return cached.conn;
-  }
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5e3,
-      socketTimeoutMS: 45e3
-    };
-    cached.promise = mongoose3.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      const name = serviceName || process.env.NEXT_PUBLIC_APP_ID || "satellite-app";
-      if (process.env.NODE_ENV !== "production") {
-        console.log(`[DEV] ${name} MongoDB connected to Cluster`);
-      }
-      return mongooseInstance;
-    });
-  }
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
-  const store = tenantStorage.getStore();
-  if (store) {
+  /**
+   * Cifra un texto utilizando AES-256-CBC de forma segura con un Vector de Inicialización (IV) aleatorio
+   */
+  static encrypt(text) {
+    if (!text) return "";
     try {
-      const tenantConn = getTenantConnection(store.dbPrefix, store.isolationStrategy);
-      await ensureConnectionReady(tenantConn);
+      const iv = crypto2.randomBytes(16);
+      const key = this.getSecret();
+      const cipher = crypto2.createCipheriv("aes-256-cbc", key, iv);
+      let encrypted = cipher.update(text, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      return `${iv.toString("hex")}:${encrypted}`;
     } catch (e) {
-      console.error(`[MultiTenant] Failed to connect to tenant database for ${store.dbPrefix}:`, e);
-      throw e;
+      console.error("\u274C Fallo al cifrar campo sensible:", e);
+      return text;
     }
   }
-  return cached.conn;
-}
-var mongodb_default = connectDB;
+  /**
+   * Descifra un texto previamente cifrado. Si no está en formato cifrado (no contiene el separador ':'), lo devuelve tal cual.
+   */
+  static decrypt(encryptedText) {
+    if (!encryptedText) return "";
+    try {
+      const parts = encryptedText.split(":");
+      if (parts.length !== 2) return encryptedText;
+      const iv = Buffer.from(parts[0], "hex");
+      const encrypted = parts[1];
+      const key = this.getSecret();
+      const decipher = crypto2.createDecipheriv("aes-256-cbc", key, iv);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return decrypted;
+    } catch (e) {
+      console.error("\u274C Fallo al descifrar campo sensible:", e);
+      return encryptedText;
+    }
+  }
+};
+
+// src/utils/email.ts
+var ResendEmailService = class {
+  /**
+   * Envia un correo electrónico utilizando la API REST de Resend.
+   * Evita añadir dependencias pesadas de terceros al SDK.
+   */
+  static async sendEmail(options) {
+    const apiKey = process.env.RESEND_API_KEY;
+    const defaultFrom = process.env.RESEND_FROM_EMAIL;
+    if (!apiKey) {
+      throw new Error("Missing RESEND_API_KEY environment variable.");
+    }
+    const from = options.from || defaultFrom;
+    if (!from) {
+      throw new Error("Missing from sender address (either options.from or RESEND_FROM_EMAIL).");
+    }
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: Array.isArray(options.to) ? options.to : [options.to],
+        subject: options.subject,
+        html: options.html,
+        text: options.text
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorMsg = data?.message || data?.error?.message || "Unknown Resend Error";
+      throw new Error(`Resend API failed: ${errorMsg}`);
+    }
+    return { id: data.id };
+  }
+};
 export {
   BrandingStyles,
   CircuitBreaker,
@@ -1508,14 +1495,19 @@ export {
   QuizEntityType,
   QuizEventAction,
   RateLimiter,
+  ResendEmailService,
+  SecurityService,
   SessionVerifySchema,
   TenantInfoSchema,
   TokenResponseSchema,
   UnauthorizedAccessError,
   VerifiedTokenPayloadSchema,
+  adjustColor,
   computeBlockHash,
   configureLogger,
+  connectAuthDB,
   mongodb_default as connectDB,
+  connectLogsDB,
   createAuthRouteHandler,
   createCircuitBreaker,
   createRateLimiter,
@@ -1524,14 +1516,19 @@ export {
   ensureConnectionReady,
   ensureIndustrialAccess,
   fetchWithRetry,
+  generateTenantCss2 as generateTenantCss,
+  getContrastColor,
+  getGlobalModel,
   getIndustrialSession,
   getTenantConnection,
   getTenantModel,
   getTenantSubdomain,
+  hexToHslComponents,
   idpCircuitBreaker,
   idpRateLimiter,
   logger,
   redactPII,
+  resolveTargetTenantContext,
   resolveTenantBranding,
   resolveTenantUri,
   tenantStorage,

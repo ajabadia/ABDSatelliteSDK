@@ -1,7 +1,7 @@
 "use client";
 import {
   FederatedSessionSchema
-} from "./chunk-SZEJBU4U.mjs";
+} from "./chunk-4XMRWPPS.mjs";
 
 // src/client/useSession.tsx
 import { createContext, useContext, useState, useEffect } from "react";

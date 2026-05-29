@@ -9,6 +9,11 @@ import { TokenResponseSchema } from './utils/schemas.js';
  * Integrates /session, /logout, and /federated/callback routes natively.
  */
 export function createAuthRouteHandler(options: IndustrialAuthOptions) {
+  const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.');
+  }
+
   const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
   const clientId = options.clientId;
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || '';
@@ -20,7 +25,7 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
 
     // 1. Session Status Endpoint (/api/auth/session)
     if (pathname.endsWith('/session')) {
-      const session = await getIndustrialSession(options.jwtSecret);
+      const session = await getIndustrialSession(jwtSecret);
       return NextResponse.json(session);
     }
 
@@ -65,8 +70,23 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
     // 3. OAuth Callback Endpoint (/api/auth/federated/callback)
     if (pathname.endsWith('/federated/callback')) {
       const code = searchParams.get('code');
+      const token = searchParams.get('token');
       const state = searchParams.get('state') || '/';
 
+      // 3a. Direct JWT Delivery (Legacy SSO / AppLauncher pattern)
+      if (token) {
+        const redirectResponse = NextResponse.redirect(new URL(state, request.url));
+        redirectResponse.cookies.set(cookieName, token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 8, // 8-hour industrial shift
+        });
+        return redirectResponse;
+      }
+
+      // 3b. Standard OAuth2 Authorization Code Exchange
       if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
         return NextResponse.json({ error: 'Invalid or missing authorization code' }, { status: 400 });
       }
