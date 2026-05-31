@@ -31,9 +31,12 @@ export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './logger'
 export { QuizEventAction, QuizEntityType } from './events';
 export type { QuizEventActionType, QuizEntityTypeValue } from './events';
 
-// Rate Limiter
+// Rate Limiter (in-memory, per-instance)
 export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
 export type { RateLimiterOptions } from './utils/rateLimiter';
+
+// Rate Limiter (MongoDB-backed, persistent across serverless invocations)
+export { rateLimitMongodb } from './utils/rateLimiter-mongodb';
 
 // Multi-Tenant Database Module
 export type { TenantContext } from './db/tenant-context';

@@ -70,23 +70,9 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
     // 3. OAuth Callback Endpoint (/api/auth/federated/callback)
     if (pathname.endsWith('/federated/callback')) {
       const code = searchParams.get('code');
-      const token = searchParams.get('token');
       const state = searchParams.get('state') || '/';
 
-      // 3a. Direct JWT Delivery (Legacy SSO / AppLauncher pattern)
-      if (token) {
-        const redirectResponse = NextResponse.redirect(new URL(state, request.url));
-        redirectResponse.cookies.set(cookieName, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 8, // 8-hour industrial shift
-        });
-        return redirectResponse;
-      }
-
-      // 3b. Standard OAuth2 Authorization Code Exchange
+      // Standard OAuth2 Authorization Code Exchange
       if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
         return NextResponse.json({ error: 'Invalid or missing authorization code' }, { status: 400 });
       }

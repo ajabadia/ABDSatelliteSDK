@@ -11,7 +11,7 @@
     "url": "git+https://github.com/ajabadia/ABDSatelliteSDK.git"
   },
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],

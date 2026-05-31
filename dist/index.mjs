@@ -1069,20 +1069,7 @@ function createAuthRouteHandler(options) {
     }
     if (pathname.endsWith("/federated/callback")) {
       const code = searchParams.get("code");
-      const token = searchParams.get("token");
       const state = searchParams.get("state") || "/";
-      if (token) {
-        const redirectResponse = NextResponse2.redirect(new URL(state, request.url));
-        redirectResponse.cookies.set(cookieName, token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60 * 8
-          // 8-hour industrial shift
-        });
-        return redirectResponse;
-      }
       if (!code || !/^[A-Za-z0-9_-]{10,256}$/.test(code)) {
         return NextResponse2.json({ error: "Invalid or missing authorization code" }, { status: 400 });
       }
@@ -1155,8 +1142,99 @@ var QuizEntityType = {
   QUIZ_USER_ROLE: "QUIZ_USER_ROLE"
 };
 
+// src/utils/rateLimiter-mongodb.ts
+import mongoose4, { Schema } from "mongoose";
+var RateLimitSchema = new Schema({
+  key: { type: String, required: true, index: true },
+  points: { type: Number, default: 0 },
+  expireAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
+  createdAt: { type: Date, default: Date.now }
+});
+var RateLimitModel = null;
+function getModel() {
+  if (RateLimitModel) return RateLimitModel;
+  RateLimitModel = mongoose4.models.RateLimit || mongoose4.model("RateLimit", RateLimitSchema);
+  return RateLimitModel;
+}
+var rateLimitMongodb = {
+  /**
+   * 🛡️ Check and increment rate limit for a specific key (atomic)
+   *
+   * Uses MongoDB's findOneAndUpdate with a conditional filter
+   * `{ points: { $lt: limit } }` so the increment only happens when
+   * the counter is still below the limit — all in one atomic operation.
+   *
+   * @returns true if allowed, false if throttled
+   */
+  async check(identifier, type, limit, windowSeconds) {
+    await connectDB();
+    const Model3 = getModel();
+    const key = `${type}:${identifier}`;
+    const now = /* @__PURE__ */ new Date();
+    const expireAt = new Date(now.getTime() + windowSeconds * 1e3);
+    const updated = await Model3.findOneAndUpdate(
+      { key, expireAt: { $gt: now }, points: { $lt: limit } },
+      { $inc: { points: 1 } },
+      { returnDocument: "after" }
+    ).exec();
+    if (updated) return true;
+    const existing = await Model3.findOne({ key, expireAt: { $gt: now } }).exec();
+    if (existing) return false;
+    await Model3.findOneAndUpdate(
+      { key },
+      {
+        $set: { points: 1, expireAt },
+        $setOnInsert: { key, createdAt: now }
+      },
+      { upsert: true }
+    ).exec();
+    return true;
+  },
+  /**
+   * 🌐 Get Client IP from headers (works in serverless)
+   * Uses platform-standard headers that Vercel, Cloudflare, etc. set.
+   */
+  getClientIp() {
+    return "0.0.0.0";
+  },
+  /**
+   * 🌐 Get Client IP using next/headers (async, needs request context)
+   */
+  async getClientIpAsync() {
+    try {
+      const { headers: headers2 } = await import("next/headers");
+      const headerList = await headers2();
+      const forwarded = headerList.get("x-forwarded-for");
+      if (forwarded) return forwarded.split(",")[0].trim();
+      const realIp = headerList.get("x-real-ip");
+      if (realIp) return realIp.trim();
+    } catch {
+    }
+    return "127.0.0.1";
+  },
+  /**
+   * 🛡️ Convenience wrapper: get IP from a standard Request object
+   */
+  getClientIpFromRequest(request) {
+    const forwarded = request.headers.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0].trim();
+    const realIp = request.headers.get("x-real-ip");
+    if (realIp) return realIp.trim();
+    return "127.0.0.1";
+  },
+  /**
+   * 🧹 Reset rate limit for a specific key
+   */
+  async reset(identifier, type) {
+    await connectDB();
+    const Model3 = getModel();
+    const key = `${type}:${identifier}`;
+    await Model3.deleteOne({ key }).exec();
+  }
+};
+
 // src/db/tenant-model.ts
-import mongoose4 from "mongoose";
+import mongoose5 from "mongoose";
 async function withTenantContext(callback, explicitContext) {
   const activeStore = tenantStorage.getStore();
   if (activeStore) {
@@ -1190,7 +1268,7 @@ function getModelForTenant(dbPrefix, isolationStrategy, modelName, schema, defau
   return compileModelOnConnection(conn, modelName, schema, collectionName);
 }
 function getTenantModel(modelName, schema) {
-  const defaultModel = mongoose4.models[modelName] || mongoose4.model(modelName, schema);
+  const defaultModel = mongoose5.models[modelName] || mongoose5.model(modelName, schema);
   const defaultCollectionName = defaultModel.collection.name;
   return new Proxy(defaultModel, {
     get(target, prop, receiver) {
@@ -1527,6 +1605,7 @@ export {
   idpCircuitBreaker,
   idpRateLimiter,
   logger,
+  rateLimitMongodb,
   redactPII,
   resolveTargetTenantContext,
   resolveTenantBranding,
