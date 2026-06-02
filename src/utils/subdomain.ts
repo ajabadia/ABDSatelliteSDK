@@ -6,6 +6,8 @@ export function getTenantSubdomain(host: string | null, rootDomain?: string): st
   if (!host) return null;
   const hostname = host.split(':')[0].toLowerCase();
   
+  const systemApps = ['auth', 'logs', 'quiz', 'analytics', 'tenantgobernance', 'suite', 'landing', 'www'];
+
   // Prevent extracting subdomain if accessing base Control Plane domains
   if (
     hostname === 'abd-tenant-gobernance.vercel.app' || 
@@ -20,16 +22,18 @@ export function getTenantSubdomain(host: string | null, rootDomain?: string): st
   const root = rootDomain || process.env.NEXT_PUBLIC_ROOT_DOMAIN;
   if (root && hostname.endsWith(`.${root}`)) {
     const prefix = hostname.slice(0, -(root.length + 1));
-    const parts = prefix.split('.');
-    const subdomain = parts[0];
-    if (subdomain === 'www') return null;
+    const prefixParts = prefix.split('.');
+    const subdomain = prefixParts[0];
+    if (systemApps.includes(subdomain)) return null;
     return subdomain;
   }
   
   // Specific handler for Vercel deployment subdomains fallback
   if (hostname.endsWith('.vercel.app')) {
     if (parts.length > 3) {
-      return parts[0];
+      const subdomain = parts[0];
+      if (systemApps.includes(subdomain)) return null;
+      return subdomain;
     }
     return null;
   }
@@ -37,7 +41,7 @@ export function getTenantSubdomain(host: string | null, rootDomain?: string): st
   // Standard production custom domains (e.g., tenant.abdelevators.com -> parts.length === 3)
   if (parts.length > 2) {
     const subdomain = parts[0];
-    if (subdomain === 'www') return null;
+    if (systemApps.includes(subdomain)) return null;
     return subdomain;
   }
   
