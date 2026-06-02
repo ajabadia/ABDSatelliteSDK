@@ -10,9 +10,6 @@ import { TokenResponseSchema } from './utils/schemas.js';
  */
 export function createAuthRouteHandler(options: IndustrialAuthOptions) {
   const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
-  if (!jwtSecret) {
-    throw new Error('[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.');
-  }
 
   const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
   const clientId = options.clientId;
@@ -21,6 +18,9 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
   const verifiedCookieName = options.verifiedCookieName || 'abd_session_verified';
 
   return async function handler(request: NextRequest) {
+    if (!jwtSecret) {
+      throw new Error('[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.');
+    }
     const { pathname, searchParams } = new URL(request.url);
 
     // 1. Session Status Endpoint (/api/auth/session)
