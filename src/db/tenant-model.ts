@@ -57,7 +57,39 @@ export function getTenantModel<T>(modelName: string, schema: Schema<T>): Model<T
 }
 
 export function getGlobalModel<T>(modelName: string, schema: Schema<T>, clusterTarget: 'AUTH' | 'LOGS'): Model<T> {
-  const conn: Connection = clusterTarget === 'AUTH' ? getAuthConnectionSync() : getLogsConnectionSync();
-  if (conn.models[modelName]) return conn.models[modelName] as Model<T>;
-  return conn.model<T>(modelName, schema);
+  let compiledModel: Model<T> | null = null;
+
+  const getModelLazy = (): Model<T> => {
+    if (compiledModel) return compiledModel;
+    const conn: Connection = clusterTarget === 'AUTH' ? getAuthConnectionSync() : getLogsConnectionSync();
+    if (conn.models[modelName]) {
+      compiledModel = conn.models[modelName] as Model<T>;
+    } else {
+      compiledModel = conn.model<T>(modelName, schema);
+    }
+    return compiledModel;
+  };
+
+  const dummyTarget = (() => {}) as unknown as Model<T>;
+
+  return new Proxy(dummyTarget, {
+    get(target, prop, receiver) {
+      // Avoid triggering connection for typical runtime check or utility properties if possible
+      if (prop === 'then' || prop === 'constructor' || prop === 'prototype') {
+        return Reflect.get(target, prop, receiver);
+      }
+      const model = getModelLazy();
+      const value = Reflect.get(model, prop);
+      return typeof value === 'function' ? value.bind(model) : value;
+    },
+    construct(target, args, newTarget) {
+      const model = getModelLazy();
+      return Reflect.construct(model as unknown as new (...args: unknown[]) => unknown, args, newTarget);
+    },
+    apply(target, thisArg, argumentsList) {
+      const model = getModelLazy();
+      return Reflect.apply(model as unknown as Function, thisArg, argumentsList);
+    }
+  }) as unknown as Model<T>;
 }
+
