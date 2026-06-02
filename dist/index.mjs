@@ -1287,9 +1287,37 @@ function getTenantModel(modelName, schema) {
   });
 }
 function getGlobalModel(modelName, schema, clusterTarget) {
-  const conn = clusterTarget === "AUTH" ? getAuthConnectionSync() : getLogsConnectionSync();
-  if (conn.models[modelName]) return conn.models[modelName];
-  return conn.model(modelName, schema);
+  let compiledModel = null;
+  const getModelLazy = () => {
+    if (compiledModel) return compiledModel;
+    const conn = clusterTarget === "AUTH" ? getAuthConnectionSync() : getLogsConnectionSync();
+    if (conn.models[modelName]) {
+      compiledModel = conn.models[modelName];
+    } else {
+      compiledModel = conn.model(modelName, schema);
+    }
+    return compiledModel;
+  };
+  const dummyTarget = (() => {
+  });
+  return new Proxy(dummyTarget, {
+    get(target, prop, receiver) {
+      if (prop === "then" || prop === "constructor" || prop === "prototype") {
+        return Reflect.get(target, prop, receiver);
+      }
+      const model = getModelLazy();
+      const value = Reflect.get(model, prop);
+      return typeof value === "function" ? value.bind(model) : value;
+    },
+    construct(target, args, newTarget) {
+      const model = getModelLazy();
+      return Reflect.construct(model, args, newTarget);
+    },
+    apply(target, thisArg, argumentsList) {
+      const model = getModelLazy();
+      return Reflect.apply(model, thisArg, argumentsList);
+    }
+  });
 }
 
 // src/utils/cloudinary.ts
