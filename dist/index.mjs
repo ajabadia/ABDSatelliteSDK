@@ -27,6 +27,7 @@ async function verifyToken(token, customSecret) {
 function getTenantSubdomain(host, rootDomain) {
   if (!host) return null;
   const hostname = host.split(":")[0].toLowerCase();
+  const systemApps = ["auth", "logs", "quiz", "analytics", "tenantgobernance", "suite", "landing", "www"];
   if (hostname === "abd-tenant-gobernance.vercel.app" || hostname === "localhost" || hostname === "127.0.0.1") {
     return null;
   }
@@ -34,20 +35,22 @@ function getTenantSubdomain(host, rootDomain) {
   const root = rootDomain || process.env.NEXT_PUBLIC_ROOT_DOMAIN;
   if (root && hostname.endsWith(`.${root}`)) {
     const prefix = hostname.slice(0, -(root.length + 1));
-    const parts2 = prefix.split(".");
-    const subdomain = parts2[0];
-    if (subdomain === "www") return null;
+    const prefixParts = prefix.split(".");
+    const subdomain = prefixParts[0];
+    if (systemApps.includes(subdomain)) return null;
     return subdomain;
   }
   if (hostname.endsWith(".vercel.app")) {
     if (parts.length > 3) {
-      return parts[0];
+      const subdomain = parts[0];
+      if (systemApps.includes(subdomain)) return null;
+      return subdomain;
     }
     return null;
   }
   if (parts.length > 2) {
     const subdomain = parts[0];
-    if (subdomain === "www") return null;
+    if (systemApps.includes(subdomain)) return null;
     return subdomain;
   }
   if (parts.length === 2 && parts[1] === "localhost") {
