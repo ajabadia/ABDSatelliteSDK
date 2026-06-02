@@ -1023,15 +1023,15 @@ async function BrandingStyles({
 import { NextResponse as NextResponse2 } from "next/server";
 function createAuthRouteHandler(options) {
   const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
-  if (!jwtSecret) {
-    throw new Error("[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.");
-  }
   const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || "https://abd-auth.vercel.app";
   const clientId = options.clientId;
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || "";
   const cookieName = options.cookieName || "abd_session";
   const verifiedCookieName = options.verifiedCookieName || "abd_session_verified";
   return async function handler(request) {
+    if (!jwtSecret) {
+      throw new Error("[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.");
+    }
     const { pathname, searchParams } = new URL(request.url);
     if (pathname.endsWith("/session")) {
       const session = await getIndustrialSession(jwtSecret);
