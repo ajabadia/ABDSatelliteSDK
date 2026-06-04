@@ -1,5 +1,4 @@
-import mongoose from 'mongoose';
-import { connectDB } from './mongodb';
+import { connectAuthDB } from './mongodb';
 import type { TenantContext } from '../db/tenant-context';
 
 /**
@@ -21,21 +20,10 @@ export async function resolveTargetTenantContext(
     return undefined;
   }
 
-  // Ensure the default mongoose connection is ready
-  await connectDB();
-
-  const conn = mongoose.connection;
-  if (conn.readyState !== 1) {
-    console.warn('[TenantResolver] Default connection not ready, cannot resolve tenant');
-    return undefined;
-  }
-
-  const authDbName = process.env.MONGODB_AUTH_DB || 'ABDElevators-Auth';
-
   try {
-    // useDb returns a cached handle — no new connection created
-    const authDb = conn.useDb(authDbName, { useCache: true });
-    const tenantsCol = authDb.collection('tenants');
+    // Connect directly to the dedicated Auth database connection
+    const authConn = await connectAuthDB();
+    const tenantsCol = authConn.collection('tenants');
 
     const tenant = await tenantsCol.findOne(
       { tenantId, active: true },

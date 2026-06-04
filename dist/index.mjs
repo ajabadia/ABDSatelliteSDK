@@ -775,9 +775,6 @@ async function ensureIndustrialAccess(requiredRole, customSecret) {
   return session.user;
 }
 
-// src/utils/tenant-resolver.ts
-import mongoose3 from "mongoose";
-
 // src/utils/mongodb.ts
 import mongoose2 from "mongoose";
 
@@ -941,16 +938,9 @@ async function resolveTargetTenantContext(tenantId) {
   if (!tenantId || tenantId.trim() === "") {
     return void 0;
   }
-  await connectDB();
-  const conn = mongoose3.connection;
-  if (conn.readyState !== 1) {
-    console.warn("[TenantResolver] Default connection not ready, cannot resolve tenant");
-    return void 0;
-  }
-  const authDbName = process.env.MONGODB_AUTH_DB || "ABDElevators-Auth";
   try {
-    const authDb = conn.useDb(authDbName, { useCache: true });
-    const tenantsCol = authDb.collection("tenants");
+    const authConn = await connectAuthDB();
+    const tenantsCol = authConn.collection("tenants");
     const tenant = await tenantsCol.findOne(
       { tenantId, active: true },
       { projection: { tenantId: 1, dbPrefix: 1, isolationStrategy: 1 } }
@@ -1146,7 +1136,7 @@ var QuizEntityType = {
 };
 
 // src/utils/rateLimiter-mongodb.ts
-import mongoose4, { Schema } from "mongoose";
+import mongoose3, { Schema } from "mongoose";
 var RateLimitSchema = new Schema({
   key: { type: String, required: true, index: true },
   points: { type: Number, default: 0 },
@@ -1156,7 +1146,7 @@ var RateLimitSchema = new Schema({
 var RateLimitModel = null;
 function getModel() {
   if (RateLimitModel) return RateLimitModel;
-  RateLimitModel = mongoose4.models.RateLimit || mongoose4.model("RateLimit", RateLimitSchema);
+  RateLimitModel = mongoose3.models.RateLimit || mongoose3.model("RateLimit", RateLimitSchema);
   return RateLimitModel;
 }
 var rateLimitMongodb = {
@@ -1237,7 +1227,7 @@ var rateLimitMongodb = {
 };
 
 // src/db/tenant-model.ts
-import mongoose5 from "mongoose";
+import mongoose4 from "mongoose";
 async function withTenantContext(callback, explicitContext) {
   const activeStore = tenantStorage.getStore();
   if (activeStore) {
@@ -1271,7 +1261,7 @@ function getModelForTenant(dbPrefix, isolationStrategy, modelName, schema, defau
   return compileModelOnConnection(conn, modelName, schema, collectionName);
 }
 function getTenantModel(modelName, schema) {
-  const defaultModel = mongoose5.models[modelName] || mongoose5.model(modelName, schema);
+  const defaultModel = mongoose4.models[modelName] || mongoose4.model(modelName, schema);
   const defaultCollectionName = defaultModel.collection.name;
   return new Proxy(defaultModel, {
     get(target, prop, receiver) {
