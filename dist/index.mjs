@@ -1585,6 +1585,51 @@ var ResendEmailService = class {
     return { id: data.id };
   }
 };
+
+// src/utils/guardian.ts
+async function evaluateAccess(params) {
+  const internalSecret = process.env.ABD_INTERNAL_SECRET;
+  if (!internalSecret) {
+    console.warn("[ABAC_SDK_WARN] ABD_INTERNAL_SECRET is not configured. Access denied by default.");
+    return {
+      allowed: false,
+      reason: "SDK_SECRET_MISSING",
+      allowedSpaceIds: [],
+      allowedGroupIds: []
+    };
+  }
+  const governanceUrl = process.env.GOVERNANCE_API_URL || "http://localhost:3500";
+  try {
+    const response = await fetch(`${governanceUrl}/api/internal/guardian/evaluate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-abd-internal-secret": internalSecret
+      },
+      body: JSON.stringify(params)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[ABAC_SDK_ERROR] Guardian API returned status ${response.status}: ${errorText}`);
+      return {
+        allowed: false,
+        reason: `GUARDIAN_API_STATUS_${response.status}`,
+        allowedSpaceIds: [],
+        allowedGroupIds: []
+      };
+    }
+    return await response.json();
+  } catch (error) {
+    const err = error;
+    console.error("[ABAC_SDK_ERROR] Failed to query Guardian evaluate endpoint:", err.message || err);
+    return {
+      allowed: false,
+      reason: "GUARDIAN_API_UNREACHABLE",
+      allowedSpaceIds: [],
+      allowedGroupIds: []
+    };
+  }
+}
 export {
   BrandingStyles,
   CircuitBreaker,
@@ -1614,6 +1659,7 @@ export {
   deleteCloudinaryAsset,
   ensureConnectionReady,
   ensureIndustrialAccess,
+  evaluateAccess,
   fetchWithRetry,
   generateTenantCss2 as generateTenantCss,
   getContrastColor,

@@ -68,3 +68,7 @@ export { SecurityService } from './utils/security';
 export { ResendEmailService } from './utils/email';
 export type { ResendEmailOptions } from './utils/email';
 
+// Guardian ABAC Evaluation
+export { evaluateAccess } from './utils/guardian';
+export type { EvaluateAccessParams, EvaluateAccessResult } from './utils/guardian';
+

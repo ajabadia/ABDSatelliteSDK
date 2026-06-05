@@ -6,7 +6,7 @@ import { LEVEL_VALUES } from './types';
 import { redactPII } from './redact-pii';
 import { getBuffer, addToBuffer, flushBuffer as flushOfflineBuffer, clearBuffer } from './offline-buffer';
 
-let globalConfig: LoggerConfig = { endpoint: process.env.LOGS_SERVICE_URL || 'http://localhost:3600/api/logs', token: process.env.LOGS_SECRET_TOKEN, appId: process.env.NEXT_PUBLIC_APP_ID || 'satellite-app', minLevel: (process.env.LOG_LEVEL as any) || 'INFO' };
+let globalConfig: LoggerConfig = { endpoint: process.env.LOGS_SERVICE_URL || 'http://localhost:5003/api/logs', token: process.env.LOGS_SECRET_TOKEN, appId: process.env.NEXT_PUBLIC_APP_ID || 'satellite-app', minLevel: (process.env.LOG_LEVEL as any) || 'INFO' };
 let connectionStatus: ConnectionStatus = 'unknown';
 const subscribers = new Set<ConnectionSubscriber>();
 
@@ -21,7 +21,7 @@ function logToConsole(level: string, message: string, meta?: LogMeta): void {
 function notifySubscribers(status: ConnectionStatus) { for (const cb of subscribers) { try { cb(status); } catch { /* ignore */ } } }
 
 function getBaseUrl(): string {
-  const url = globalConfig.endpoint || 'http://localhost:3600/api/logs';
+  const url = globalConfig.endpoint || 'http://localhost:5003/api/logs';
   try { const parsed = new URL(url); return `${parsed.protocol}//${parsed.host}`; } catch { return url.replace('/api/logs', ''); }
 }
 
