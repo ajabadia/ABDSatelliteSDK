@@ -1,6 +1,6 @@
 {
   "name": "@ajabadia/satellite-sdk",
-  "version": "1.0.46",
+  "version": "1.0.47",
   "description": "Centralized SDK for ABD Ecosystem Satellites: Federated Identity, Tenant Access, and Branding.",
   "main": "./dist/index.mjs",
   "publishConfig": {
