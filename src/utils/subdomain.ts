@@ -6,7 +6,7 @@ export function getTenantSubdomain(host: string | null, rootDomain?: string): st
   if (!host) return null;
   const hostname = host.split(':')[0].toLowerCase();
   
-  const systemApps = ['auth', 'logs', 'quiz', 'analytics', 'tenantgobernance', 'suite', 'landing', 'www'];
+  const systemApps = ['auth', 'logs', 'quiz', 'analytics', 'tenantgobernance', 'suite', 'landing', 'www', 'files'];
 
   // Prevent extracting subdomain if accessing base Control Plane domains
   if (
