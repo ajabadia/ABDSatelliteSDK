@@ -12,9 +12,7 @@
   },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -39,18 +37,18 @@
   },
   "devDependencies": {
     "@ajabadia/styles": "latest",
-    "@types/node": "25.8.0",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "lucide-react": "1.17.0",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "tsup": "^8.0.0",
-    "typescript": "6.0.3",
+    "typescript": "catalog:",
     "vite": "^6.0.0",
-    "vitest": "4.1.8",
-    "@vitest/coverage-v8": "4.1.8"
+    "vitest": "catalog:"
   },
   "exports": {
     ".": {
@@ -62,13 +60,7 @@
       "import": "./dist/client.mjs"
     }
   },
-  "keywords": [
-    "abd",
-    "sso",
-    "multi-tenant",
-    "satellite",
-    "nextjs"
-  ],
+  "keywords": ["abd", "sso", "multi-tenant", "satellite", "nextjs"],
   "author": "Antigravity | ABD Ecosystem Architecture Team",
   "license": "UNLICENSED"
 }
