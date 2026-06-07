@@ -1,6 +1,6 @@
 {
   "name": "@ajabadia/satellite-sdk",
-  "version": "1.0.47",
+  "version": "1.0.48",
   "description": "Centralized SDK for ABD Ecosystem Satellites: Federated Identity, Tenant Access, and Branding.",
   "main": "./dist/index.mjs",
   "publishConfig": {
@@ -12,7 +12,9 @@
   },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -60,7 +62,13 @@
       "import": "./dist/client.mjs"
     }
   },
-  "keywords": ["abd", "sso", "multi-tenant", "satellite", "nextjs"],
+  "keywords": [
+    "abd",
+    "sso",
+    "multi-tenant",
+    "satellite",
+    "nextjs"
+  ],
   "author": "Antigravity | ABD Ecosystem Architecture Team",
   "license": "UNLICENSED"
 }
