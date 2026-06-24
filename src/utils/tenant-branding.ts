@@ -28,7 +28,7 @@ export async function resolveTenantBranding(): Promise<TenantBranding | null> {
     const subdomain = getTenantSubdomain(host);
     if (!subdomain) return null;
 
-    const providerUrl = process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
+    const providerUrl = process.env.AUTH_PROVIDER_URL || '/auth';
     const verifyTenantUrl = `${providerUrl}/api/auth/tenant/info?subdomain=${subdomain}`;
 
     const res = await fetch(verifyTenantUrl, {

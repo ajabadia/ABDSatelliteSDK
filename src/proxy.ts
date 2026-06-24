@@ -20,7 +20,7 @@ import { resolveTenant, verifySessionExpiry } from './utils/idp-resolver';
 const debugLog = (msg: string, meta?: Record<string, unknown>) => { if (process.env.NODE_ENV !== 'production') logger.debug(msg, meta); };
 
 export function withIndustrialAuth(options: IndustrialAuthOptions) {
-  const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
+  const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || '/auth';
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || '';
   const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
   if (!jwtSecret) throw new Error('[SDK] AUTH_JWT_SECRET is required for JWT verification.');
@@ -33,6 +33,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
     if (pathname.includes('.') || pathname.startsWith('/_next') || pathname.startsWith('/api/') || pathname === '/favicon.ico')
       return options.intlMiddleware ? options.intlMiddleware(request) : NextResponse.next();
 
+    const cookieDomain = process.env.COOKIE_DOMAIN;
     const host = request.headers.get('host');
     const subdomain = getTenantSubdomain(host);
     let tenantInfo: TenantInfo | null = null;
@@ -90,14 +91,20 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       authorizeUrl.searchParams.set('state', pathname);
       if (isAppNotAllowed) authorizeUrl.searchParams.set('error', 'app_not_allowed');
       if (tenantInfo) authorizeUrl.searchParams.set('tenant', tenantInfo.tenantId);
+      const clearConfig: Record<string, unknown> = { path: '/', maxAge: 0, expires: new Date(0) };
+      if (cookieDomain) clearConfig.domain = cookieDomain;
       const response = NextResponse.redirect(authorizeUrl);
-      response.cookies.set(cookieName, '', { path: '/', maxAge: 0, expires: new Date(0) });
-      response.cookies.set(verifiedCookieName, '', { path: '/', maxAge: 0, expires: new Date(0) });
+      response.cookies.set(cookieName, '', clearConfig);
+      response.cookies.set(verifiedCookieName, '', clearConfig);
       return response;
     }
 
     const response = options.intlMiddleware ? await options.intlMiddleware(request) : NextResponse.next();
-    if (didVerifyThisRequest) response.cookies.set(verifiedCookieName, '1', { path: '/', maxAge: 60, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+    if (didVerifyThisRequest) {
+      const verifiedConfig: Record<string, unknown> = { path: '/', maxAge: 60, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+      if (cookieDomain) verifiedConfig.domain = cookieDomain;
+      response.cookies.set(verifiedCookieName, '1', verifiedConfig);
+    }
     return response;
   };
 }

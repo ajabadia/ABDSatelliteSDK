@@ -21,7 +21,7 @@ import { TokenResponseSchema } from './utils/schemas.js';
 export function createAuthRouteHandler(options: IndustrialAuthOptions) {
   const jwtSecret = options.jwtSecret || process.env.AUTH_JWT_SECRET;
 
-  const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || 'https://abd-auth.vercel.app';
+  const providerUrl = options.authProviderUrl || process.env.AUTH_PROVIDER_URL || '/auth';
   const clientId = options.clientId;
   const clientSecret = options.clientSecret || process.env.AUTH_CLIENT_SECRET || '';
   const cookieName = options.cookieName || 'abd_session';
@@ -32,6 +32,7 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
       throw new Error('[SDK] AUTH_JWT_SECRET is required. Pass via options.jwtSecret or AUTH_JWT_SECRET env var.');
     }
     const { pathname, searchParams } = new URL(request.url);
+    const cookieDomain = process.env.COOKIE_DOMAIN;
 
     // 1. Session Status Endpoint (/api/auth/session)
     if (pathname.endsWith('/session')) {
@@ -42,12 +43,13 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
     // 2. Logout Endpoint (/api/auth/logout)
     if (pathname.endsWith('/logout')) {
       const isSilent = searchParams.get('silent') === 'true';
-      const clearCookieConfig = {
+      const clearCookieConfig: Record<string, unknown> = {
         path: '/',
         maxAge: 0,
         expires: new Date(0),
         httpOnly: true,
       };
+      if (cookieDomain) clearCookieConfig.domain = cookieDomain;
 
       if (isSilent) {
         const response = new NextResponse(null, { status: 200 });
@@ -111,14 +113,16 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
         const rawData = await res.json();
         const data = TokenResponseSchema.parse(rawData);
 
-        const redirectResponse = NextResponse.redirect(new URL(state, request.url));
-        redirectResponse.cookies.set(cookieName, data.token, {
+        const sessionConfig: Record<string, unknown> = {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           path: '/',
           maxAge: 60 * 60 * 8, // 8-hour industrial shift
-        });
+        };
+        if (cookieDomain) sessionConfig.domain = cookieDomain;
+        const redirectResponse = NextResponse.redirect(new URL(state, request.url));
+        redirectResponse.cookies.set(cookieName, data.token, sessionConfig);
 
         return redirectResponse;
       } catch (err) {
