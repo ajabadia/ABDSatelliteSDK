@@ -1,14 +1,14 @@
 /**
- * @purpose Valida y decodifica los tokens JWT.
- * @purpose_en Validates JWT tokens and decodes their payloads.
+ * @purpose Valida, decodifica y genera tokens JWT.
+ * @purpose_en Validates JWT tokens, decodes their payloads, and generates new tokens.
  * @refactorable false
  * @classification Helper Utility
  * @complexity Low
  * @fingerprint exports:2,imports:2,sig:14o1kl
- * @lastUpdated 2026-06-23T23:25:19.177Z
+ * @lastUpdated 2026-06-25
  */
 
-import { jwtVerify, type JWTPayload } from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { VerifiedTokenPayloadSchema } from './schemas.js';
 
 export interface VerifiedTokenPayload extends JWTPayload {
@@ -22,6 +22,21 @@ export interface VerifiedTokenPayload extends JWTPayload {
   dbPrefix: string;
   isolationStrategy: string;
   allowedApps?: string[];
+  sessionId?: string;
+}
+
+export interface TokenPayloadInput {
+  sub: string;
+  email: string;
+  name?: string;
+  surname?: string;
+  tenantId: string;
+  role: string;
+  permissions?: string[];
+  dbPrefix?: string;
+  isolationStrategy?: string;
+  allowedApps?: string[];
+  groups?: string[];
   sessionId?: string;
 }
 
@@ -43,4 +58,29 @@ export async function verifyToken(token: string, customSecret?: string): Promise
     console.error("[SDK_JWT_VERIFY_ERROR] Failed to verify token:", err instanceof Error ? err.message : err);
     return null;
   }
+}
+
+/**
+ * 🪙 Generate a signed JWT for development/sandbox purposes.
+ * Uses the same AUTH_JWT_SECRET as the rest of the ecosystem.
+ */
+export async function generateToken(payload: TokenPayloadInput, customSecret?: string): Promise<string> {
+  return await new SignJWT({
+    sub: payload.sub,
+    email: payload.email,
+    name: payload.name || '',
+    surname: payload.surname || '',
+    tenantId: payload.tenantId,
+    role: payload.role,
+    permissions: payload.permissions || [],
+    dbPrefix: payload.dbPrefix || '',
+    isolationStrategy: payload.isolationStrategy || 'COLLECTION_PREFIX',
+    allowedApps: payload.allowedApps || [],
+    groups: payload.groups || [],
+    ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
+  })
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime('2h')
+    .sign(getSecretKey(customSecret));
 }

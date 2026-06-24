@@ -13,7 +13,8 @@ export * from './types';
 export type { FetchRetryResult } from './types';
 
 // Cryptographic and subdomain helpers
-export { verifyToken } from './utils/crypto';
+export { verifyToken, generateToken } from './utils/crypto';
+export type { TokenPayloadInput } from './utils/crypto';
 export { getTenantSubdomain } from './utils/subdomain';
 
 // Proxy Guard
@@ -22,6 +23,9 @@ export { fetchWithRetry } from './utils/fetch-with-retry';
 
 // Server-side session helpers
 export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
+
+// Redis session cache (Fase 6.5)
+export { getCache, setCache, delCache, sessionCacheKey, verifyCacheKey, hashToken } from './session/redis-store';
 export { resolveTargetTenantContext } from './utils/tenant-resolver';
 
 // Schemas

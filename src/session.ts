@@ -13,6 +13,7 @@ import { verifyToken } from './utils/crypto';
 import { FederatedSessionSchema } from './utils/schemas.js';
 import { logger } from './utils/logger';
 import type { FederatedSession } from './types';
+import { getCache, setCache, sessionCacheKey, hashToken } from './session/redis-store';
 
 export class UnauthorizedAccessError extends Error {
   constructor(message = 'UNAUTHORIZED_ECOSYSTEM_ACCESS') {
@@ -41,13 +42,18 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
       return { authenticated: false };
     }
 
+    // 1. Try Redis cache first
+    const cacheKey = sessionCacheKey(await hashToken(sessionCookie.value));
+    const cached = await getCache<FederatedSession>(cacheKey);
+    if (cached) return cached;
+
+    // 2. Verify JWT (cache miss)
     const payload = await verifyToken(sessionCookie.value, customSecret);
     if (!payload) {
       return { authenticated: false };
     }
 
-    // Validate the payload structure with Zod before returning
-    // Schema applies defaults via .default() (string, array, enum), so parsed result matches FederatedSession type
+    // 3. Validate the payload structure with Zod
     const parsedPayload = FederatedSessionSchema.safeParse({
       authenticated: true,
       user: {
@@ -72,7 +78,9 @@ export async function getIndustrialSession(customSecret?: string): Promise<Feder
       return { authenticated: false };
     }
 
-    // Return validated data - schema guarantees correct types with defaults
+    // 4. Populate Redis cache (8h TTL — matches JWT expiry)
+    await setCache(cacheKey, parsedPayload.data, 60 * 60 * 8);
+
     return parsedPayload.data;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
