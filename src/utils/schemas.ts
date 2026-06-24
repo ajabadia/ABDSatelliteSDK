@@ -1,3 +1,13 @@
+/**
+ * @purpose Valida y define esquemas para información del inquilino, sesiones federadas, verificación de sesiones, respuestas de tokens y payloads de tokens verificados utilizando Zod.
+ * @purpose_en Validates and defines schemas for tenant information, federated sessions, session verification, token responses, and verified token payloads using Zod.
+ * @refactorable false
+ * @classification Type Definition
+ * @complexity Low
+ * @fingerprint exports:5,imports:1,sig:zpkvrq
+ * @lastUpdated 2026-06-23T20:33:26.598Z
+ */
+
 import { z } from 'zod';
 
 export const TenantInfoSchema = z.object({

@@ -1,3 +1,13 @@
+/**
+ * @purpose Proporciona funciones y tipos de utilidad para autenticación, gestión de sesiones, limitación de velocidad, operaciones de base de datos, personalización, seguridad y más.
+ * @purpose_en Exports various utility functions and types for authentication, session management, rate limiting, database operations, branding, security, and more.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:8,imports:0,sig:1ky2ri2
+ * @lastUpdated 2026-06-23T20:31:07.088Z
+ */
+
 // Types
 export * from './types';
 export type { FetchRetryResult } from './types';

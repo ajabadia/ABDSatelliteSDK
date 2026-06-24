@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona límites de velocidad para diferentes tipos de solicitudes utilizando MongoDB.
+ * @purpose_en Manages rate limiting for various types of requests using MongoDB.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:2,imports:2,sig:4lwkk7
+ * @lastUpdated 2026-06-23T23:25:41.007Z
+ */
+
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import { connectDB } from './mongodb';
 

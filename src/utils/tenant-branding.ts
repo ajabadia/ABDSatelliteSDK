@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona notificaciones emergentes basadas en el dominio actual.
+ * @purpose_en Resolves tenant branding based on the current subdomain.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Medium
+ * @fingerprint exports:1,imports:3,sig:9s34jp
+ * @lastUpdated 2026-06-23T23:25:58.297Z
+ */
+
 import { getTenantSubdomain } from './subdomain';
 import { TenantInfoSchema } from './schemas';
 import type { TenantBranding, NextFetchRequestInit } from '../types';

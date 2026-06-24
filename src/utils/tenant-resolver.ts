@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona un TenantContext para un inquilino objetivo consultando la base de datos central de autenticación.
+ * @purpose_en Resolves a TenantContext for a target tenant by querying the central auth database.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Low
+ * @fingerprint exports:1,imports:2,sig:bahhwk
+ * @lastUpdated 2026-06-23T23:26:02.992Z
+ */
+
 import { connectAuthDB } from './mongodb';
 import type { TenantContext } from '../db/tenant-context';
 

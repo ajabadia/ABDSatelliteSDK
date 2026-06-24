@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona autenticación y autorización middleware para el ABDSatelliteSDK, manejando sesiones de usuario y redirigiendo a un proveedor de autenticación.
+ * @purpose_en Handles authentication and authorization middleware for the ABDSatelliteSDK, managing user sessions and redirecting to an authentication provider.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:2,imports:7,sig:1lt5j37
+ * @lastUpdated 2026-06-23T20:31:32.493Z
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from './utils/crypto';
 import { getTenantSubdomain } from './utils/subdomain';

@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * @purpose Gestiona y proporciona estado de sesión del cliente para autenticación, incluyendo recuperar, actualizar y manejar cambios de sesión.
+ * @purpose_en Manages and provides client session state for authentication, including fetching, updating, and handling session changes.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Context/Provider
+ * @complexity Medium
+ * @fingerprint exports:3,imports:3,sig:fr8lqz
+ * @lastUpdated 2026-06-23T23:24:16.857Z
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { FederatedSession, UserProfile } from '../types';
 import { FederatedSessionSchema } from '../utils/schemas.js';

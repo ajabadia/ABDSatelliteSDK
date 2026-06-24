@@ -1,5 +1,7 @@
 # 🛰️ @ajabadia/satellite-sdk
 
+[![ERA 11 Certified](https://img.shields.io/badge/ERA%2011-CERTIFIED-brightgreen?style=for-the-badge&logo=shield)](../.github/workflows/audit.yml)
+
 Centralized npm package for high-speed integration of satellite applications within the **ABD Industrial Ecosystem**. 
 
 This SDK provides all the foundational tooling required to connect a satellite app to the central infrastructure, including:

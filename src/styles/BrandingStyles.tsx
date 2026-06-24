@@ -1,3 +1,13 @@
+/**
+ * @purpose Renderiza un componente React Server para inyectar marcas de tenant en el cabezal del documento utilizando variables de Tailwind CSS.
+ * @purpose_en Renders a React Server Component for injecting tenant branding into the document head using Tailwind CSS variables.
+ * @refactorable false
+ * @classification UI Component
+ * @complexity Medium
+ * @fingerprint exports:1,imports:5,sig:zshxjb
+ * @lastUpdated 2026-06-23T23:24:48.368Z
+ */
+
 import { headers } from 'next/headers';
 import { generateTenantCss } from '@ajabadia/styles';
 import { getTenantSubdomain } from '../utils/subdomain';

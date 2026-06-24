@@ -1,4 +1,14 @@
 /**
+ * @purpose Gestiona el dominio subdominio del teniente desde la cabecera del host, excluyendo ciertos dominios y aplicaciones del sistema.
+ * @purpose_en Extracts the tenant subdomain from a host header, excluding specific domains and system applications.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Medium
+ * @fingerprint exports:1,imports:0,sig:1ow4npz
+ * @lastUpdated 2026-06-23T23:25:54.525Z
+ */
+
+/**
  * 🏢 Helper to extract tenant subdomain from host header.
  * Excludes main Control Plane and localhost domains.
  */

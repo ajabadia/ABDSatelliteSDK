@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona y valida la sesión industrial al recuperarla de una cookie, descriptografándola y asegurando la autenticación del usuario y sus privilegios.
+ * @purpose_en Manages and validates the industrial session by retrieving it from a cookie, decrypting it, and ensuring user authentication and privileges.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:4,imports:5,sig:lyllr9
+ * @lastUpdated 2026-06-23T23:24:43.747Z
+ */
+
 import { cookies } from 'next/headers';
 import { verifyToken } from './utils/crypto';
 import { FederatedSessionSchema } from './utils/schemas.js';

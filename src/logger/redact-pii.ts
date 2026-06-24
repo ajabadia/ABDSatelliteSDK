@@ -1,3 +1,13 @@
+/**
+ * @purpose Redacta PII recursivamente de valores, incluyendo claves sensibles y patrones como direcciones de correo electrónico y números de tarjeta de crédito.
+ * @purpose_en Recursively redacts Personally Identifiable Information (PII) from values, including sensitive keys and patterns like email addresses and credit card numbers.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:1,imports:0,sig:1mvqbja
+ * @lastUpdated 2026-06-23T23:24:32.250Z
+ */
+
 const SENSITIVE_KEYS = [
   'password', 'token', 'secret', 'jwt', 'apikey',
   'clientsecret', 'jwtsecret', 'creditcard', 'cvv',

@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona límites de velocidad para solicitudes API utilizando un algoritmo de bolsillo de tokens.
+ * @purpose_en Manages rate limiting for API requests using a token bucket algorithm.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:4,imports:2,sig:1jz1com
+ * @lastUpdated 2026-06-23T20:33:16.060Z
+ */
+
 import { logger } from './logger';
 import type { RateLimiterOptions } from './rateLimiterTypes';
 export type { RateLimiterOptions } from './rateLimiterTypes';

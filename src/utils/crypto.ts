@@ -1,3 +1,13 @@
+/**
+ * @purpose Valida y decodifica los tokens JWT.
+ * @purpose_en Validates JWT tokens and decodes their payloads.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:2,imports:2,sig:14o1kl
+ * @lastUpdated 2026-06-23T23:25:19.177Z
+ */
+
 import { jwtVerify, type JWTPayload } from 'jose';
 import { VerifiedTokenPayloadSchema } from './schemas.js';
 

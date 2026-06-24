@@ -1,3 +1,13 @@
+/**
+ * @purpose Proporciona un correo electrónico mediante API de reenvío.
+ * @purpose_en Sends an email using the Resend API.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Low
+ * @fingerprint exports:2,imports:0,sig:2912dp
+ * @lastUpdated 2026-06-23T23:25:22.366Z
+ */
+
 export interface ResendEmailOptions {
   to: string | string[];
   subject: string;

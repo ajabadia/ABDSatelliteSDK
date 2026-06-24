@@ -1,4 +1,14 @@
 /**
+ * @purpose Proporciona constantes y tipos para eventos y entidades relacionados con los exámenes utilizados en el ABDSatelliteSDK.
+ * @purpose_en Defines constants and types for quiz-related events and entities used in the ABDSatelliteSDK.
+ * @refactorable false
+ * @classification Data/Constants
+ * @complexity Low
+ * @fingerprint exports:4,imports:0,sig:1t0thvo
+ * @lastUpdated 2026-06-23T23:24:26.339Z
+ */
+
+/**
  * Catálogo de acciones de auditoría del Ecosistema de Aprendizaje (ABDQuiz).
  * Cada constante representa un evento atómico trazable en ABDLogs.
  */

@@ -1,4 +1,14 @@
 /**
+ * @purpose Gestiona permisos de acceso basados en políticas ABAC utilizando un motor Guardian Centralizado.
+ * @purpose_en Evaluates access permissions based on ABAC policies using a centralized Guardian Engine.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Low
+ * @fingerprint exports:3,imports:0,sig:qutxgd
+ * @lastUpdated 2026-06-23T23:25:31.332Z
+ */
+
+/**
  * 🛰️ Centralized Guardian ABAC Evaluation Client
  * Connects dynamically to the Tenant Governance control plane.
  */

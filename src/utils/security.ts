@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona la cifrado y descifrado de datos sensibles utilizando AES-256-CBC con una clave secreta segura.
+ * @purpose_en Manages encryption and decryption of sensitive data using AES-256-CBC with a secure secret key.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:1,imports:1,sig:1yt2931
+ * @lastUpdated 2026-06-23T23:25:49.255Z
+ */
+
 import crypto from 'crypto';
 
 // Se utiliza la clave configurada en .env.local, con fallback seguro para desarrollo local

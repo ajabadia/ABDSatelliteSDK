@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona un buffer de almacenamiento offline para payloads de registro, guardandolos en localStorage y enviándolos a un punto de conexión del servidor.
+ * @purpose_en Manages an offline buffer for audit log payloads, saving them to localStorage and flushing them to a server endpoint.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:4,imports:1,sig:1fafg3f
+ * @lastUpdated 2026-06-23T20:31:15.673Z
+ */
+
 import type { BufferedEntry, AuditLogPayload } from './types';
 
 const BUFFER_KEY = 'abd_logger_buffer';

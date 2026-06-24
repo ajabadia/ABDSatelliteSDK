@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona y proporciona contexto para conexiones y modelos MongoDB específicos de inquilinos.
+ * @purpose_en Manages and provides a context for tenant-specific MongoDB connections and models.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:4,imports:6,sig:f4bqef
+ * @lastUpdated 2026-06-23T20:30:56.354Z
+ */
+
 import mongoose, { Connection, Schema, Model } from 'mongoose';
 import { getIndustrialSession } from '../session';
 import { tenantStorage } from './tenant-context';

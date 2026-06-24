@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona solicitudes HTTP con lógica de retry exponencial, incorporando límites de velocidad y patrones de fallido.
+ * @purpose_en Manages HTTP requests with exponential backoff retry logic, incorporating rate limiting and circuit breaker patterns.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:1,imports:4,sig:f8neh4
+ * @lastUpdated 2026-06-23T23:25:27.076Z
+ */
+
 import { logger } from './logger';
 import { idpRateLimiter } from './rateLimiter';
 import { idpCircuitBreaker } from './circuitBreaker';

@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona rutas de autenticación para el ABDSatelliteSDK, incluyendo gestión de sesiones, logout y cambio de tokens.
+ * @purpose_en Handles authentication routes for the ABDSatelliteSDK, including session management, logout, and token exchange.
+ * @refactorable true (contains multiple distinct functionalities)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:1,imports:5,sig:1q3enom
+ * @lastUpdated 2026-06-23T23:24:37.925Z
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndustrialSession } from './session';
 import { logger } from './utils/logger';

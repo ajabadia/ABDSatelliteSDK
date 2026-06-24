@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona el patrón de interruptor de circuito para llamadas de IdP, evitando fallos cascados mediante fallas rápidas y reiniciándose después de un tiempo de espera.
+ * @purpose_en Manages the circuit breaker pattern for IdP calls, preventing cascading failures by failing fast and resetting after a timeout.
+ * @refactorable true (contains too many state variables and logic)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:2,imports:2,sig:dqllca
+ * @lastUpdated 2026-06-23T23:25:06.080Z
+ */
+
 import { logger } from './logger';
 import { CircuitState } from './circuitBreakerTypes';
 export { CircuitState, type CircuitBreakerOptions, type CircuitBreakerStatus } from './circuitBreakerTypes';

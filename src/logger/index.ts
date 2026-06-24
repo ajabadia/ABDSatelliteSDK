@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona el estado de conexión y registro para la aplicación ABDSatelliteSDK.
+ * @purpose_en Manages logging and connection status for the ABDSatelliteSDK application.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:3,imports:4,sig:05njbk
+ * @lastUpdated 2026-06-23T20:31:10.809Z
+ */
+
 import type { AuditLogPayload, LoggerConfig, ConnectionStatus, ConnectionSubscriber, LogMeta } from './types';
 export type { LogLevel, LoggerConfig, LogMeta, AuditLogPayload, ConnectionStatus, ConnectionSubscriber } from './types';
 export { redactPII } from './redact-pii';

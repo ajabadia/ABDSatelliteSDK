@@ -1,3 +1,13 @@
+/**
+ * @purpose Proporciona definiciones de tipos y interfaces para configuraciones de registro, payloads y estados de conexión dentro del ABDSatelliteSDK.
+ * @purpose_en Defines types and interfaces for logging configurations, payloads, and connection statuses within the ABDSatelliteSDK.
+ * @refactorable false
+ * @classification Type Definition
+ * @complexity Low
+ * @fingerprint exports:8,imports:0,sig:1ju13o
+ * @lastUpdated 2026-06-23T20:31:26.158Z
+ */
+
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
 export interface LoggerConfig {

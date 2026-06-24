@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona variables CSS dinámicas para configuración del tema, asegurando compatibilidad y consistencia entre modos claro y oscuro.
+ * @purpose_en Generates dynamic CSS variables for theme configuration, ensuring compatibility and consistency between light and dark modes.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:2,imports:1,sig:8lddqv
+ * @lastUpdated 2026-06-23T23:24:59.273Z
+ */
+
 import { adjustColor, getContrastColor } from './color-utils';
 
 export interface ThemeConfig {

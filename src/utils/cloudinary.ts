@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona el subido y eliminado de activos de marca a Cloudinary, incluyendo subidos de logo e icono con transformaciones específicas.
+ * @purpose_en Manages the upload and deletion of branding assets to Cloudinary, including logo and favicon uploads with specific transformations.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Low
+ * @fingerprint exports:2,imports:1,sig:1e94ngv
+ * @lastUpdated 2026-06-23T23:25:11.519Z
+ */
+
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configurar Cloudinary utilizando variables de entorno

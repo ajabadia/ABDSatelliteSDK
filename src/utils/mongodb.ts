@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona conexiones MongoDB para el ABDSatelliteSDK, proporcionando un patrón de singleton para garantizar una conexión única por servicio y manejar configuraciones multi-tenant.
+ * @purpose_en Manages MongoDB connections for the ABDSatelliteSDK, providing a singleton pattern to ensure only one connection per service and handling multi-tenant configurations.
+ * @refactorable true (contains multiple functions with specific responsibilities)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:5,imports:3,sig:15n42k4
+ * @lastUpdated 2026-06-23T20:33:08.498Z
+ */
+
 import mongoose, { Connection } from 'mongoose';
 import { tenantStorage } from '../db/tenant-context';
 import { getTenantConnection, ensureConnectionReady } from '../db/tenant-connection';

@@ -1,4 +1,14 @@
 /**
+ * @purpose Proporciona funciones útiles para manipular y convertir colores, incluyendo iluminar/descalar, determinar contraste y convertir a componentes HSL.
+ * @purpose_en Provides utility functions for manipulating and converting colors, including lightening/darkening, determining contrast, and converting to HSL components.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:3,imports:0,sig:1yku7yk
+ * @lastUpdated 2026-06-23T23:24:54.110Z
+ */
+
+/**
  * Utility to lighten/darken a hex color for dark mode optimization
  * Implements shift-bits hex manipulation.
  */

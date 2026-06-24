@@ -1,3 +1,13 @@
+/**
+ * @purpose Proporciona plantillas y tipos para las interfaces de datos utilizadas en el ABDSatelliteSDK.
+ * @purpose_en Defines TypeScript interfaces and types for various data structures used in the ABDSatelliteSDK application.
+ * @refactorable false
+ * @classification Type Definition
+ * @complexity Low
+ * @fingerprint exports:9,imports:1,sig:6vj99c
+ * @lastUpdated 2026-06-23T20:31:52.797Z
+ */
+
 import type { NextRequest, NextResponse } from 'next/server';
 
 export interface NextFetchRequestConfig {

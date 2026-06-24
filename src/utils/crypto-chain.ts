@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona el hash SHA-256 inmutable de un bloque en una cadena auditiva forense mediante serialización determinista.
+ * @purpose_en Calculates the immutable SHA-256 hash of a block in an audit forensic chain using deterministic serialization.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:1,imports:2,sig:1dno38r
+ * @lastUpdated 2026-06-23T23:25:16.146Z
+ */
+
 import crypto from 'crypto';
 import stringify from 'fast-json-stable-stringify';
 

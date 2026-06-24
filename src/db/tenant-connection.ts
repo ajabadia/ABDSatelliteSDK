@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona y proporciona conexiones MongoDB para diferentes inquilinos según la estrategia de aislamiento.
+ * @purpose_en Manages and provides MongoDB connections for different tenants based on the isolation strategy.
+ * @refactorable true (contains multiple functions with distinct responsibilities)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:3,imports:1,sig:1c8i09u
+ * @lastUpdated 2026-06-23T20:30:48.735Z
+ */
+
 import mongoose, { Connection } from 'mongoose';
 
 interface CachedConnection { connection: Connection; lastUsed: number; }

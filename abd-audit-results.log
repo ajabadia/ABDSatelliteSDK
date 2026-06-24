@@ -1,4 +1,4 @@
-﻿ABD SYSTEM AUDIT REPORT - 05/29/2026 01:34:20
+﻿ABD SYSTEM AUDIT REPORT - 06/24/2026 00:25:21
 
 [MEDIUM:FIRE:LARGE_FILE] src\fetchWithRetry.test.ts:1
 Message: WARNING: File is long (398 lines).
@@ -36,6 +36,12 @@ Message: WARNING: File is long (165 lines).
     2 | import { logger, redactPII, configureLogger } from './logger';
     3 | 
 
+[MEDIUM:FIRE:LARGE_FILE] src\utils\rateLimiter-mongodb.ts:1
+Message: WARNING: File is long (161 lines).
+>   1 | /**
+    2 | * @purpose Gestiona límites de velocidad para diferentes tipos de solicitudes utilizando MongoDB.
+    3 | * @purpose_en Manages rate limiting for various types of requests using MongoDB.
+
 [MEDIUM:FIRE:LARGE_FILE] src\utils\rateLimiter.test.ts:1
 Message: WARNING: File is long (334 lines).
 >   1 | import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
@@ -48,7 +54,7 @@ Message: WARNING: File is long (203 lines).
     2 | 
     3 | // ── Mocks ──────────────────────────────────────────────
 
-[PHASE:SUCCESS] [1/4 Structural Audit]: Passed successfully with 0 errors and 8 warnings.
+[PHASE:SUCCESS] [1/4 Structural Audit]: Passed successfully with 0 errors and 9 warnings.
 
 [PHASE:SUCCESS] [2/4 Purity & Types  ]: Passed successfully with 0 errors and 0 warnings.
 
