@@ -45,3 +45,18 @@ export const QuizEntityType = {
 } as const;
 
 export type QuizEntityTypeValue = (typeof QuizEntityType)[keyof typeof QuizEntityType];
+
+export const SystemEventType = {
+  FILE_UPLOADED: 'files.uploaded',
+  FILE_DELETED: 'files.deleted',
+  FILE_VERSION_CREATED: 'files.version.created',
+  STORAGE_CONNECTOR_CHANGED: 'storage.connector.changed',
+  TENANT_CONFIG_CHANGED: 'tenant.config.changed',
+  TENANT_CREATED: 'tenant.created',
+  USER_ROLE_CHANGED: 'user.role.changed',
+  GUARDIAN_POLICY_CHANGED: 'guardian.policy.changed',
+  LICENSE_REQUESTED: 'license.requested',
+  LICENSE_RESOLVED: 'license.resolved',
+} as const;
+
+export type SystemEventTypeValue = (typeof SystemEventType)[keyof typeof SystemEventType];

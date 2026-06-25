@@ -1,3 +1,13 @@
+/**
+ * @purpose Valida y define esquemas para texto de desarrollo e ingresos de adjuntos.
+ * @purpose_en Validates and defines schemas for development text and attachment inputs.
+ * @refactorable false
+ * @classification Type Definition
+ * @complexity Low
+ * @fingerprint exports:4,imports:1,sig:cvlmw8
+ * @lastUpdated 2026-06-25T09:20:48.001Z
+ */
+
 import { z } from 'zod';
 
 const MAX_RESPONSE_LENGTH = 10000;

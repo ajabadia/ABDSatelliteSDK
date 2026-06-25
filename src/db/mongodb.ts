@@ -9,8 +9,8 @@
  */
 
 import mongoose, { Connection } from 'mongoose';
-import { tenantStorage } from '../db/tenant-context';
-import { getTenantConnection, ensureConnectionReady } from '../db/tenant-connection';
+import { tenantStorage } from './tenant-context';
+import { getTenantConnection, ensureConnectionReady } from './tenant-connection';
 
 interface MongooseCache {
   conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null;

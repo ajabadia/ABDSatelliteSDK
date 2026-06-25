@@ -8,7 +8,7 @@
  * @lastUpdated 2026-06-23T23:26:02.992Z
  */
 
-import { connectAuthDB } from './mongodb';
+import { connectAuthDB } from '../db/mongodb';
 import type { TenantContext } from '../db/tenant-context';
 
 /**

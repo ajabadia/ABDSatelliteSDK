@@ -9,13 +9,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from './utils/crypto';
-import { getTenantSubdomain } from './utils/subdomain';
-import { logger } from './utils/logger';
-import type { IndustrialAuthOptions, TenantInfo } from './types';
-import { fetchWithRetry } from './utils/fetch-with-retry';
-export type { NextFetchRequestInit, FetchRetryResult } from './types';
-import { resolveTenant, verifySessionExpiry } from './utils/idp-resolver';
+import { verifyToken } from '../core/crypto';
+import { getTenantSubdomain } from '../core/subdomain';
+import { logger } from '../utils/logger';
+import type { IndustrialAuthOptions, TenantInfo } from '../types';
+import { fetchWithRetry } from '../utils/fetch-with-retry';
+export type { NextFetchRequestInit, FetchRetryResult } from '../types';
+import { resolveTenant, verifySessionExpiry } from '../utils/idp-resolver';
 
 const debugLog = (msg: string, meta?: Record<string, unknown>) => { if (process.env.NODE_ENV !== 'production') logger.debug(msg, meta); };
 

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-import { createAuthRouteHandler } from './routeHandler';
+import { createAuthRouteHandler } from './auth-middleware/routeHandler';
 
-// 1. Mock ./session module
-vi.mock('./session', () => {
+// 1. Mock ./auth-middleware/session module
+vi.mock('./auth-middleware/session', () => {
   return {
     getIndustrialSession: vi.fn(),
   };
 });
 
-import { getIndustrialSession } from './session';
+import { getIndustrialSession } from './auth-middleware/session';
 
 describe('routeHandler.ts', () => {
   const options = {

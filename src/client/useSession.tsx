@@ -12,7 +12,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { FederatedSession, UserProfile } from '../types';
-import { FederatedSessionSchema } from '../utils/schemas.js';
+import { FederatedSessionSchema } from '../core/schemas.js';
 
 export interface ClientSessionContext {
   session: FederatedSession;

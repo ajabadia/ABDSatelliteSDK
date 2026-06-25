@@ -1,3 +1,13 @@
+/**
+ * @purpose Valida y refina la estructura de los datos de preguntas para su ingestión en un corpus.
+ * @purpose_en Validates and refines the structure of question data for ingestion into a corpus.
+ * @refactorable false
+ * @classification Type Definition
+ * @complexity Low
+ * @fingerprint exports:3,imports:1,sig:18yizya
+ * @lastUpdated 2026-06-25T09:20:40.832Z
+ */
+
 import { z } from 'zod';
 
 export const IngestQuestionSchema = z.object({

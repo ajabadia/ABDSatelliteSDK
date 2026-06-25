@@ -13,37 +13,45 @@ export * from './types';
 export type { FetchRetryResult } from './types';
 
 // Cryptographic and subdomain helpers
-export { verifyToken, generateToken } from './utils/crypto';
-export type { TokenPayloadInput } from './utils/crypto';
-export { getTenantSubdomain } from './utils/subdomain';
+export { verifyToken, generateToken } from './core/crypto';
+export type { TokenPayloadInput } from './core/crypto';
+export { getTenantSubdomain } from './core/subdomain';
 
 // Proxy Guard
-export { withIndustrialAuth } from './proxy';
+export { withIndustrialAuth } from './auth-middleware/proxy';
 export { fetchWithRetry } from './utils/fetch-with-retry';
 
 // Server-side session helpers
-export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
+export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './auth-middleware/session';
 
 // Redis session cache (Fase 6.5)
-export { getCache, setCache, delCache, sessionCacheKey, verifyCacheKey, hashToken } from './session/redis-store';
+export { getCache, setCache, delCache, sessionCacheKey, verifyCacheKey, hashToken } from './auth-middleware/session/redis-store';
 export { resolveTargetTenantContext } from './utils/tenant-resolver';
 
 // Schemas
-export * from './utils/schemas.js';
+export * from './core/schemas.js';
 
 // SSR Styling Component
-export { BrandingStyles } from './styles/BrandingStyles';
+export { BrandingStyles } from './styles/index.js';
 
 // API Dynamic Handler
-export { createAuthRouteHandler } from './routeHandler';
+export { createAuthRouteHandler } from './auth-middleware/routeHandler';
 
 // Logger (enhanced with Offline Buffering)
 export { configureLogger, logger, redactPII } from './logger';
 export type { LoggerConfig, AuditLogPayload, LogMeta, LogLevel } from './logger';
 
 // QUIZ Ecosystem Event Types
-export { QuizEventAction, QuizEntityType } from './events';
-export type { QuizEventActionType, QuizEntityTypeValue } from './events';
+export { QuizEventAction, QuizEntityType } from './auth-middleware/events';
+export type { QuizEventActionType, QuizEntityTypeValue } from './auth-middleware/events';
+
+// System Event Types (Fase 9.2 — Event Bus)
+export { SystemEventType } from './auth-middleware/events';
+export type { SystemEventTypeValue } from './auth-middleware/events';
+
+// Event Bus (Fase 9.2)
+export { createPublisher, createConsumer } from './event-bus';
+export type { EventEnvelope, EventHandler, EventBusConfig } from './event-bus';
 
 // Rate Limiter (in-memory, per-instance)
 export { RateLimiter, idpRateLimiter, createRateLimiter } from './utils/rateLimiter';
@@ -71,12 +79,13 @@ export { computeBlockHash } from './utils/crypto-chain';
 // Tenant Branding resolver (RSC-safe)
 export { resolveTenantBranding } from './utils/tenant-branding';
 
-export { default as connectDB, connectAuthDB, connectLogsDB, default } from './utils/mongodb';
+export { default as connectDB, connectAuthDB, connectLogsDB, default } from './db/mongodb';
 export { CircuitBreaker, idpCircuitBreaker, createCircuitBreaker, CircuitState } from './utils/circuitBreaker';
 export type { CircuitBreakerOptions, CircuitBreakerStatus } from './utils/circuitBreaker';
 
-// Security (AES encryption)
-export { SecurityService } from './utils/security';
+// Security (AES encryption + Mongoose field-level encryption plugin)
+export { SecurityService } from './core/security';
+export { encryptionPlugin } from './db/encryption-plugin';
 
 // Resend Email Service
 export { ResendEmailService } from './utils/email';
@@ -85,4 +94,8 @@ export type { ResendEmailOptions } from './utils/email';
 // Guardian ABAC Evaluation
 export { evaluateAccess } from './utils/guardian';
 export type { EvaluateAccessParams, EvaluateAccessResult } from './utils/guardian';
+
+// Guardian ABAC Middleware (Fase 9.4)
+export { withGuardianAccess } from './auth-middleware/guardian-middleware';
+export type { GuardianAccessOptions } from './auth-middleware/guardian-middleware';
 

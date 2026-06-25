@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
+import { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './auth-middleware/session';
 
 // 1. Mock next/headers
 vi.mock('next/headers', () => {
@@ -14,8 +14,8 @@ vi.mock('next/headers', () => {
   };
 });
 
-// 2. Mock ./utils/crypto
-vi.mock('./utils/crypto', () => {
+// 2. Mock ./core/crypto
+vi.mock('./core/crypto', () => {
   const mockVerifyToken = vi.fn();
   return {
     verifyToken: mockVerifyToken,
@@ -26,7 +26,7 @@ vi.mock('./utils/crypto', () => {
 // @ts-ignore - mock exports from vi.mock
 import { mockGet, mockCookies } from 'next/headers';
 // @ts-ignore - mock exports from vi.mock
-import { mockVerifyToken } from './utils/crypto';
+import { mockVerifyToken } from './core/crypto';
 
 describe('session.ts', () => {
   beforeEach(() => {

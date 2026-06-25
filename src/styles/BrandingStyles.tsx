@@ -10,9 +10,9 @@
 
 import { headers } from 'next/headers';
 import { generateTenantCss } from '@ajabadia/styles';
-import { getTenantSubdomain } from '../utils/subdomain';
+import { getTenantSubdomain } from '../core/subdomain';
 import type { TenantInfo, NextFetchRequestInit } from '../types';
-import { TenantInfoSchema } from '../utils/schemas.js';
+import { TenantInfoSchema } from '../core/schemas.js';
 
 interface BrandingStylesProps {
   authProviderUrl?: string;

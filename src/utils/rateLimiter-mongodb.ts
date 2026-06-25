@@ -9,7 +9,7 @@
  */
 
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { connectDB } from './mongodb';
+import { connectDB } from '../db/mongodb';
 
 /**
  * 🚦 Mongoose RateLimit Schema

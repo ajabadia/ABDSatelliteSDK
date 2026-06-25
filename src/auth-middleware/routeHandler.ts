@@ -10,9 +10,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndustrialSession } from './session';
-import { logger } from './utils/logger';
-import type { IndustrialAuthOptions } from './types';
-import { TokenResponseSchema } from './utils/schemas.js';
+import { logger } from '../utils/logger';
+import type { IndustrialAuthOptions } from '../types';
+import { TokenResponseSchema } from '../core/schemas.js';
 
 /**
  * 🛰️ Factory function that generates a Next.js App Router API Route Handler.

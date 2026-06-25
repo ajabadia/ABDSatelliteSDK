@@ -59,6 +59,34 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./core": {
+      "types": "./dist/core.d.mts",
+      "import": "./dist/core.mjs"
+    },
+    "./db": {
+      "types": "./dist/db.d.mts",
+      "import": "./dist/db.mjs"
+    },
+    "./logger": {
+      "types": "./dist/logger.d.mts",
+      "import": "./dist/logger.mjs"
+    },
+    "./event-bus": {
+      "types": "./dist/event-bus.d.mts",
+      "import": "./dist/event-bus.mjs"
+    },
+    "./auth-middleware": {
+      "types": "./dist/auth-middleware.d.mts",
+      "import": "./dist/auth-middleware.mjs"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.mts",
+      "import": "./dist/utils.mjs"
+    },
+    "./styles": {
+      "types": "./dist/styles.d.mts",
+      "import": "./dist/styles.mjs"
+    },
     "./client": {
       "types": "./dist/client.d.mts",
       "import": "./dist/client.mjs"

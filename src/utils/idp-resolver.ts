@@ -11,8 +11,8 @@
 import { logger } from './logger';
 import { fetchWithRetry } from './fetch-with-retry';
 import type { TenantInfo, NextFetchRequestInit } from '../types';
-import { TenantInfoSchema, SessionVerifySchema } from './schemas';
-import { getCache, setCache, verifyCacheKey } from '../session/redis-store';
+import { TenantInfoSchema, SessionVerifySchema } from '../core/schemas';
+import { getCache, setCache, verifyCacheKey } from '../auth-middleware/session/redis-store';
 
 /**
  * 🏢 Fetch tenant info from the Central Identity Provider.

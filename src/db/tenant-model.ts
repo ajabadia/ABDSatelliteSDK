@@ -9,11 +9,11 @@
  */
 
 import mongoose, { Connection, Schema, Model } from 'mongoose';
-import { getIndustrialSession } from '../session';
+import { getIndustrialSession } from '../auth-middleware/session';
 import { tenantStorage } from './tenant-context';
 import type { TenantContext } from './tenant-context';
 import { getTenantConnection, ensureConnectionReady } from './tenant-connection';
-import { getAuthConnectionSync, getLogsConnectionSync } from '../utils/mongodb';
+import { getAuthConnectionSync, getLogsConnectionSync } from './mongodb';
 
 export type { TenantContext } from './tenant-context';
 export { tenantStorage } from './tenant-context';

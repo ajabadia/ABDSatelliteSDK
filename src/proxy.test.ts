@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-import { withIndustrialAuth } from './proxy';
+import { withIndustrialAuth } from './auth-middleware/proxy';
 
 // 1. Mock utils
-vi.mock('./utils/crypto', () => {
+vi.mock('./core/crypto', () => {
   const mockVerifyToken = vi.fn();
   return {
     verifyToken: mockVerifyToken,
@@ -11,7 +11,7 @@ vi.mock('./utils/crypto', () => {
   };
 });
 
-vi.mock('./utils/subdomain', () => {
+vi.mock('./core/subdomain', () => {
   const mockGetTenantSubdomain = vi.fn();
   return {
     getTenantSubdomain: mockGetTenantSubdomain,
@@ -20,9 +20,9 @@ vi.mock('./utils/subdomain', () => {
 });
 
 // @ts-ignore - mock exports from vi.mock
-import { mockVerifyToken } from './utils/crypto';
+import { mockVerifyToken } from './core/crypto';
 // @ts-ignore - mock exports from vi.mock
-import { mockGetTenantSubdomain } from './utils/subdomain';
+import { mockGetTenantSubdomain } from './core/subdomain';
 
 describe('proxy.ts (withIndustrialAuth)', () => {
   const options = {

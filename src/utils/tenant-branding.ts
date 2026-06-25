@@ -8,8 +8,8 @@
  * @lastUpdated 2026-06-23T23:25:58.297Z
  */
 
-import { getTenantSubdomain } from './subdomain';
-import { TenantInfoSchema } from './schemas';
+import { getTenantSubdomain } from '../core/subdomain';
+import { TenantInfoSchema } from '../core/schemas';
 import type { TenantBranding, NextFetchRequestInit } from '../types';
 
 /**

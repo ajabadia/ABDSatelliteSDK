@@ -9,10 +9,10 @@
  */
 
 import { cookies } from 'next/headers';
-import { verifyToken } from './utils/crypto';
-import { FederatedSessionSchema } from './utils/schemas.js';
-import { logger } from './utils/logger';
-import type { FederatedSession } from './types';
+import { verifyToken } from '../core/crypto';
+import { FederatedSessionSchema } from '../core/schemas.js';
+import { logger } from '../utils/logger';
+import type { FederatedSession } from '../types';
 import { getCache, setCache, sessionCacheKey, hashToken } from './session/redis-store';
 
 export class UnauthorizedAccessError extends Error {

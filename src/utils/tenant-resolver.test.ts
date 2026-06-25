@@ -1,40 +1,28 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────
 
-vi.mock('./mongodb', () => ({
-  connectDB: vi.fn().mockResolvedValue(undefined),
-}));
-
 const mockFindOne = vi.fn();
 
-vi.mock('mongoose', () => ({
-  default: {
-    connection: {
-      readyState: 1,
-      useDb: vi.fn(() => ({
-        collection: vi.fn(() => ({
-          findOne: mockFindOne,
-        })),
-      })),
-    },
-  },
+vi.mock('../db/mongodb', () => ({
+  connectDB: vi.fn().mockResolvedValue(undefined),
+  connectAuthDB: vi.fn().mockResolvedValue({
+    collection: vi.fn(() => ({
+      findOne: mockFindOne,
+    })),
+  }),
 }));
 
 // ── Imports ─────────────────────────────────────────────
 
 import { resolveTargetTenantContext } from './tenant-resolver';
+import { connectAuthDB } from '../db/mongodb';
 
 // ── Tests ──────────────────────────────────────────────
 
 describe('resolveTargetTenantContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.MONGODB_AUTH_DB = 'ABDElevators-Auth';
-  });
-
-  afterEach(() => {
-    delete process.env.MONGODB_AUTH_DB;
   });
 
   // ── Empty tenantId ──
@@ -54,26 +42,18 @@ describe('resolveTargetTenantContext', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should NOT call connectDB or mongoose when tenantId is empty', async () => {
+  it('should NOT call connectAuthDB when tenantId is empty', async () => {
     await resolveTargetTenantContext();
-
-    const connectDB = (await import('./mongodb')).connectDB;
-    expect(connectDB).not.toHaveBeenCalled();
+    expect(connectAuthDB).not.toHaveBeenCalled();
   });
 
-  // ── Connection not ready ──
+  // ── Connection fails ──
 
-  it('should return undefined when mongoose connection is not ready', async () => {
-    // Override readyState for this test
-    const mongoose = await import('mongoose');
-    const origReadyState = (mongoose.default.connection as { readyState: number }).readyState;
-    (mongoose.default.connection as { readyState: number }).readyState = 0;
+  it('should return undefined when connectAuthDB fails', async () => {
+    vi.mocked(connectAuthDB).mockRejectedValueOnce(new Error('Connection error'));
 
     const result = await resolveTargetTenantContext('tenant-1');
     expect(result).toBeUndefined();
-
-    // Restore
-    (mongoose.default.connection as { readyState: number }).readyState = origReadyState;
   });
 
   // ── Successful resolution ──
@@ -162,41 +142,9 @@ describe('resolveTargetTenantContext', () => {
   // ── Error handling ──
 
   it('should return undefined when findOne throws', async () => {
-    mockFindOne.mockRejectedValue(new Error('Database connection failed'));
+    mockFindOne.mockRejectedValue(new Error('Database query failed'));
 
     const result = await resolveTargetTenantContext('tenant-1');
     expect(result).toBeUndefined();
-  });
-
-  it('should return undefined when useDb throws', async () => {
-    const mongoose = await import('mongoose');
-    const origUseDb = (mongoose.default.connection as { useDb: (...args: never[]) => unknown }).useDb;
-    (mongoose.default.connection as { useDb: (...args: never[]) => unknown }).useDb = vi.fn(() => {
-      throw new Error('Invalid database');
-    });
-
-    const result = await resolveTargetTenantContext('tenant-1');
-    expect(result).toBeUndefined();
-
-    // Restore
-    (mongoose.default.connection as { useDb: (...args: never[]) => unknown }).useDb = origUseDb;
-  });
-
-  it('should use MONGODB_AUTH_DB env var when set', async () => {
-    mockFindOne.mockResolvedValue({
-      tenantId: 'custom',
-      dbPrefix: 'c_',
-      isolationStrategy: 'COLLECTION_PREFIX',
-    });
-
-    process.env.MONGODB_AUTH_DB = 'CustomAuthDB';
-    await resolveTargetTenantContext('custom');
-
-    // Verify useDb was called with the custom name
-    const mongoose = await import('mongoose');
-    expect(mongoose.default.connection.useDb).toHaveBeenCalledWith(
-      'CustomAuthDB',
-      { useCache: true }
-    );
   });
 });
