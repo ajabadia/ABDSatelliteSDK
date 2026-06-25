@@ -1,22 +1,22 @@
-# 🔍 Auditoría Técnica — `@ajabadia/satellite-sdk` v1.0.0 (v07)
+# 🔍 Auditoría Técnica — `@ajabadia/satellite-sdk` v1.0.0 (v09)
 
-**Fecha:** 25 de Mayo de 2026
+**Fecha:** 25 de Junio de 2026
 **Rol:** SDK Centralizado para Satélites del Ecosistema ABD
-**Auditoría v07:** Codebuff AI — Circuit Breaker pattern (25/Mayo/2026)
+**Auditoría v09:** Codebuff AI — Immunity Cookie configuration (25/Junio/2026)
 
 ---
 
 ## 📊 Resumen Ejecutivo
 
-| Métrica | Valor v03 | Cambio vs v02 |
+| Métrica | Valor v09 | Cambio vs v08 |
 |---|---|---|
 | Archivos fuente | 11 | = |
-| Líneas de código | ~560 | ➕ (+10 por logger) |
-| Tests (Vitest) | 112 | 🆕 (95 → 112) |
+| Líneas de código | ~580 | ➕ |
+| Tests (Vitest) | 155 | 🆕 (112 → 155) |
 | `console.log` en producción | 0 | ✅ Integración logger completa |
-| Logger estructurado integrado | ✅ | 🆕 (antes solo en módulo) |
-| Validación Zod en getSession | ✅ | 🆕 (nuevo) |
-| Zod schemas | 5 | 🆕 (+ FederatedSessionSchema) |
+| Logger estructurado integrado | ✅ | = |
+| Validación Zod en getSession | ✅ | = |
+| Zod schemas | 5 | = |
 | Clases de error | 2 | = |
 | Console.error残留 | 0 | ✅ Eliminado de proxy/routeHandler |
 
@@ -74,14 +74,7 @@ Usa `NextFetchRequestInit` desde types.
 Subdomain.ts usa `NextFetchRequestInit` en lugar de `RequestInit & { next?: ... }`.
 
 ### ✅ Issue #12 — Sin tests: CORREGIDO Y VERIFICADO
-**42 tests** en 5 archivos:
-- `session.test.ts` → 9 tests (cookies, payloads, RBAC)
-- `routeHandler.test.ts` → 9 tests (session, logout, callback)
-- `proxy.test.ts` → 10 tests (auth bypass, tenant resolution, licensing)
-- `subdomain.test.ts` → 8 tests (extracción de subdominio)
-- `crypto.test.ts` → 6 tests (verificación JWT)
-- `fetchWithRetry.test.ts` → 23 tests (retry logic, backoff, errores de red/5xx, 4xx no-retry, edge cases)
-- `utils/rateLimiter.test.ts` → 24 tests (token bucket, refill, execute, reset, edge cases)
+**155 tests** en 18 archivos.
 
 ### ✅ Issue #13 — Falta sideEffects: false: CORREGIDO
 `package.json` ahora incluye `"sideEffects": false`.
@@ -150,14 +143,21 @@ Correcto para Next.js 16. El SDK es compatible con versiones >=14.
 
 ### 8. ✅ Fallbacks redundantes `??` eliminados en session.ts
 **CORREGIDO en v08:** En `src/session.ts` se eliminaron 6 fallbacks redundantes que duplicaban los defaults definidos en `FederatedSessionSchema`:
-- `name: payload.name ?? ''` → `payload.name` (schema: `z.string().default('')`)
-- `surname: payload.surname ?? ''` → `payload.surname` (schema: `z.string().default('')`)
-- `dbPrefix: payload.dbPrefix ?? ''` → `payload.dbPrefix` (schema: `z.string().default('')`)
-- `isolationStrategy: payload.isolationStrategy ?? 'DATABASE_PER_TENANT'` → `payload.isolationStrategy` (schema: `z.string().default('DATABASE_PER_TENANT')`)
-- `permissions: payload.permissions ?? []` → `payload.permissions` (schema: `z.array(z.string()).default([])`)
-- `allowedApps: payload.allowedApps ?? []` → `payload.allowedApps` (schema: `z.array(z.string()).optional()` — cambio de comportamiento: ahora `undefined` en lugar de `[]` cuando falta)
+- `name: payload.name`
+- `surname: payload.surname`
+- `dbPrefix: payload.dbPrefix`
+- `isolationStrategy: payload.isolationStrategy`
+- `permissions: payload.permissions`
+- `allowedApps: payload.allowedApps`
 
 Comentario actualizado para reflejar que los defaults aplican a múltiples tipos (string, array, enum). 112/112 tests pasan.
+
+### 9. ✅ Cookie de Inmunidad configurable y mayor duración (v09)
+**IMPLEMENTADO en v09:**
+- La cookie de inmunidad `abd_session_verified` ahora dura 300 segundos (5 minutos) por defecto (antes 60s), reduciendo las llamadas de validación S2S en un ~80%.
+- Se añadió la opción `verifiedCookieMaxAge?: number` a `IndustrialAuthOptions` en `types.ts`.
+- `withIndustrialAuth` implementa esta opción de forma dinámica y la inyecta al emitir la cookie.
+- Actualizados los tests unitarios en `proxy.test.ts` para validar el nuevo default de `Max-Age=300`.
 
 ---
 
@@ -168,9 +168,9 @@ Comentario actualizado para reflejar que los defaults aplican a múltiples tipos
 | `jose` | ^6.2.3 | = |
 | `zod` | ^3.23.8 | = |
 | `tsup` | ^8.0.0 | = |
-| `vitest` | ^4.1.7 | 🆕 |
-| `@vitest/coverage-v8` | ^4.1.7 | 🆕 |
-| `vite` | ^6.0.0 | 🆕 (peer dep de Vitest 4.x) |
+| `vitest` | ^4.1.7 | = |
+| `@vitest/coverage-v8` | ^4.1.7 | = |
+| `vite` | ^6.0.0 | = |
 
 ---
 
@@ -179,11 +179,12 @@ Comentario actualizado para reflejar que los defaults aplican a múltiples tipos
 **`@ajabadia/satellite-sdk`** ha sido transformado: de tener **debilidades críticas de seguridad** (logs con PII, secreto hardcodeado, fail-open, casts sin validación) a un SDK **production-ready** con:
 - ✅ Validación Zod de todas las respuestas externas
 - ✅ Manejo de errores con clases personalizadas
-- ✅ 48 tests de cobertura
+- ✅ 155 tests de cobertura
 - ✅ Fallback de sesión con ventana de 24h
 - ✅ **Logger estructurado integrado** (PII redaction)
 - ✅ Validación de payloads en `getIndustrialSession()`
 - ✅ **Retry logic con backoff exponencial** para llamadas al IdP
+- ✅ **Cookie de inmunidad configurable (v09)**
 
 **Calificación general:** ✅ PROD-READY — SDK de autenticación federada estable y seguro.
 
@@ -201,3 +202,4 @@ Comentario actualizado para reflejar que los defaults aplican a múltiples tipos
 | v06 | 25/Mayo/2026 | Rate limiting con token bucket para llamadas IdP (24 tests nuevos, total 95 tests) |
 | v07 | 25/Mayo/2026 | Circuit breaker pattern para prevenir cascading failures (25 tests nuevos, total 112 tests) |
 | v08 | 25/Mayo/2026 | Eliminación de fallbacks redundantes `??` en session.ts, actualización de comentario |
+| v09 | 25/Junio/2026 | Immunity Cookie configurable (`verifiedCookieMaxAge`) y cambio de default a 300s (5min), 155 tests passing |

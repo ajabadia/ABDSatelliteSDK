@@ -72,6 +72,7 @@ export interface IndustrialAuthOptions {
   publicPaths?: string[];
   cookieName?: string;
   verifiedCookieName?: string;
+  verifiedCookieMaxAge?: number;
   intlMiddleware?: (request: NextRequest) => Promise<NextResponse> | NextResponse;
 }
 

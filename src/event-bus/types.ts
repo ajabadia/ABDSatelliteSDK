@@ -27,3 +27,15 @@ export interface EventBusConfig {
   pollIntervalMs?: number;
   fallbackStorage?: (envelope: EventEnvelope) => Promise<void>;
 }
+
+export interface StreamInfo {
+  eventType: string;
+  streamKey: string;
+  length: number;
+}
+
+export interface StreamEventEntry {
+  id: string;
+  data: Record<string, unknown>;
+  timestamp: string;
+}

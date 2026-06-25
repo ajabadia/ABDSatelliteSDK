@@ -26,6 +26,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
   if (!jwtSecret) throw new Error('[SDK] AUTH_JWT_SECRET is required for JWT verification.');
   const cookieName = options.cookieName || 'abd_session';
   const verifiedCookieName = options.verifiedCookieName || 'abd_session_verified';
+  const verifiedCookieMaxAge = options.verifiedCookieMaxAge ?? 300;
   const publicPaths = options.publicPaths || ['/', '/logout-success'];
 
   return async function middleware(request: NextRequest) {
@@ -101,7 +102,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
 
     const response = options.intlMiddleware ? await options.intlMiddleware(request) : NextResponse.next();
     if (didVerifyThisRequest) {
-      const verifiedConfig: Record<string, unknown> = { path: '/', maxAge: 60, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+      const verifiedConfig: Record<string, unknown> = { path: '/', maxAge: verifiedCookieMaxAge, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
       if (cookieDomain) verifiedConfig.domain = cookieDomain;
       response.cookies.set(verifiedCookieName, '1', verifiedConfig);
     }

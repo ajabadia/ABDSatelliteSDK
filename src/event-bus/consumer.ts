@@ -11,6 +11,8 @@
 import { Redis } from '@upstash/redis';
 import type { EventEnvelope, EventHandler, EventBusConfig } from './types';
 
+const LAST_ID_PREFIX = 'eventbus:lastid:';
+
 interface StreamEntry {
   id: string;
   payload: string;
@@ -34,18 +36,29 @@ const state: ConsumerState = {
   lastIds: new Map(),
 };
 
-async function pollOnce(): Promise<void> {
+async function getPersistedLastId(redis: Redis, eventType: string): Promise<string> {
+  const persisted = await redis.get<string>(`${LAST_ID_PREFIX}${eventType}`);
+  return persisted || state.lastIds.get(eventType) || '0';
+}
+
+async function setPersistedLastId(redis: Redis, eventType: string, lastId: string): Promise<void> {
+  state.lastIds.set(eventType, lastId);
+  await redis.set(`${LAST_ID_PREFIX}${eventType}`, lastId);
+}
+
+async function pollOnce(useRedisLastId = false): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
 
   for (const [eventType, handlers] of state.handlers.entries()) {
     try {
       const streamKey = `events:${eventType}`;
-      const lastId = state.lastIds.get(eventType) || '0';
+      const lastId = useRedisLastId ? await getPersistedLastId(redis, eventType) : (state.lastIds.get(eventType) || '0');
       const response = await redis.xread(streamKey, lastId);
       if (!response) continue;
 
       const entries = flattenStreamResponse(response);
+      let newLastId = lastId;
       for (const entry of entries) {
         let envelope: EventEnvelope;
         try {
@@ -56,7 +69,12 @@ async function pollOnce(): Promise<void> {
         for (const handler of handlers) {
           await handler(envelope);
         }
-        state.lastIds.set(eventType, entry.id);
+        newLastId = entry.id;
+      }
+      if (useRedisLastId) {
+        await setPersistedLastId(redis, eventType, newLastId);
+      } else {
+        state.lastIds.set(eventType, newLastId);
       }
     } catch {
       // silent — will retry on next poll
@@ -110,8 +128,14 @@ export function createConsumer(config: EventBusConfig) {
       }
     },
 
+    /** In-memory lastId poll (legacy, for long-running instances) */
     async pollOnce(): Promise<void> {
-      return pollOnce();
+      return pollOnce(false);
+    },
+
+    /** Per-request poll using Redis-persisted lastId (serverless-friendly) */
+    async processPending(): Promise<void> {
+      return pollOnce(true);
     },
   };
 }

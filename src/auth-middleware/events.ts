@@ -57,6 +57,8 @@ export const SystemEventType = {
   GUARDIAN_POLICY_CHANGED: 'guardian.policy.changed',
   LICENSE_REQUESTED: 'license.requested',
   LICENSE_RESOLVED: 'license.resolved',
+  QUIZ_ATTEMPT_STARTED: 'quiz.attempt.started',
+  QUIZ_ATTEMPT_COMPLETED: 'quiz.attempt.completed',
 } as const;
 
 export type SystemEventTypeValue = (typeof SystemEventType)[keyof typeof SystemEventType];

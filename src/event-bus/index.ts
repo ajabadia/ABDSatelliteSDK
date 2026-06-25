@@ -10,5 +10,6 @@
 
 export { createPublisher } from './publisher';
 export { createConsumer } from './consumer';
-export type { EventEnvelope, EventHandler, EventBusConfig } from './types';
+export { getAllStreamInfo, getStreamRecentEvents } from './monitoring';
+export type { EventEnvelope, EventHandler, EventBusConfig, StreamInfo, StreamEventEntry } from './types';
 export { SystemEventType } from '../auth-middleware/events';

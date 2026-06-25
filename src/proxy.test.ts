@@ -267,7 +267,7 @@ const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: Reques
       // Verify verified immunity cookie was injected in response
       const cookiesHeader = res.headers.get('set-cookie');
       expect(cookiesHeader).toContain('abd_session_verified=1');
-      expect(cookiesHeader).toContain('Max-Age=60');
+      expect(cookiesHeader).toContain('Max-Age=300');
     });
 
     it('should bypass Central IdP verification if immunity cookie is present', async () => {
