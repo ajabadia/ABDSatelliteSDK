@@ -1,0 +1,8 @@
+ WARN  Issue while reading "D:\desarrollos\ABDSuite\ABDSatelliteSDK\.npmrc". Failed to replace env in config: ${GITHUB_NPM_TOKEN}
+
+> @ajabadia/satellite-sdk@1.0.78 test D:\desarrollos\ABDSuite\ABDSatelliteSDK
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.8 [39m[90mD:/desarrollos/ABDSuite/ABDSatelliteSDK[39m
+

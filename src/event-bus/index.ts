@@ -11,3 +11,4 @@
 export { createPublisher } from './publisher';
 export { createConsumer } from './consumer';
 export type { EventEnvelope, EventHandler, EventBusConfig } from './types';
+export { SystemEventType } from '../auth-middleware/events';
