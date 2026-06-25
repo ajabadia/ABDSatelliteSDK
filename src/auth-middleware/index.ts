@@ -13,6 +13,7 @@ export { createAuthRouteHandler } from './routeHandler';
 export { getIndustrialSession, ensureIndustrialAccess, UnauthorizedAccessError, InsufficientPrivilegesError } from './session';
 export { getCache, setCache, delCache, sessionCacheKey, verifyCacheKey, hashToken } from './session/redis-store';
 export { withGuardianAccess } from './guardian-middleware';
+export { evaluateAccess } from '../utils/guardian';
 export type { GuardianAccessOptions } from './guardian-middleware';
 export { QuizEventAction, QuizEntityType, SystemEventType } from './events';
 export type { QuizEventActionType, QuizEntityTypeValue, SystemEventTypeValue } from './events';
