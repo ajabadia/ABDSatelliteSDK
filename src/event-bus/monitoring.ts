@@ -1,3 +1,13 @@
+/**
+ * @purpose Gestiona y recupera información del flujo de eventos de Redis.
+ * @purpose_en Manages and retrieves event stream information from Redis.
+ * @refactorable false
+ * @classification Business Service
+ * @complexity Low
+ * @fingerprint exports:2,imports:3,sig:175p7zn
+ * @lastUpdated 2026-06-26T06:17:59.966Z
+ */
+
 import { Redis } from '@upstash/redis';
 import { SystemEventType } from '../auth-middleware/events';
 import type { StreamInfo, StreamEventEntry } from './types';
