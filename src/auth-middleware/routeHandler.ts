@@ -92,7 +92,7 @@ export function createAuthRouteHandler(options: IndustrialAuthOptions) {
       try {
         const tokenUrl = `${providerUrl}/api/auth/federated/token`;
         const currentUrl = new URL(request.url);
-        const dynamicRedirectUri = `${currentUrl.protocol}//${currentUrl.host}/api/auth/federated/callback`;
+        const dynamicRedirectUri = `${currentUrl.protocol}//${currentUrl.host}/api/abd-auth/federated/callback`;
 
         const res = await fetch(tokenUrl, {
           method: 'POST',
