@@ -88,7 +88,7 @@ export function withIndustrialAuth(options: IndustrialAuthOptions) {
       const currentUrl = new URL(request.url);
       const authorizeUrl = new URL(`${providerUrl}/api/auth/federated/authorize`, request.url);
       authorizeUrl.searchParams.set('client_id', options.clientId);
-      authorizeUrl.searchParams.set('redirect_uri', `${currentUrl.protocol}//${currentUrl.host}/api/auth/federated/callback`);
+      authorizeUrl.searchParams.set('redirect_uri', `${currentUrl.protocol}//${currentUrl.host}/api/abd-auth/federated/callback`);
       authorizeUrl.searchParams.set('state', pathname);
       if (isAppNotAllowed) authorizeUrl.searchParams.set('error', 'app_not_allowed');
       if (tenantInfo) authorizeUrl.searchParams.set('tenant', tenantInfo.tenantId);
