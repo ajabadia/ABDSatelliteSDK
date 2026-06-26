@@ -4,8 +4,8 @@
  * @refactorable false
  * @classification Type Definition
  * @complexity Low
- * @fingerprint exports:3,imports:0,sig:1x3oawg
- * @lastUpdated 2026-06-25T09:21:56.499Z
+ * @fingerprint exports:5,imports:0,sig:fq5h5v
+ * @lastUpdated 2026-06-26T10:04:06.826Z
  */
 
 export interface EventEnvelope {

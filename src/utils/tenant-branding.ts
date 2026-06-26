@@ -4,8 +4,8 @@
  * @refactorable false
  * @classification Helper Utility
  * @complexity Medium
- * @fingerprint exports:1,imports:3,sig:9s34jp
- * @lastUpdated 2026-06-23T23:25:58.297Z
+ * @fingerprint exports:1,imports:3,sig:1el5hzt
+ * @lastUpdated 2026-06-26T10:04:17.152Z
  */
 
 import { getTenantSubdomain } from '../core/subdomain';

@@ -1,11 +1,11 @@
 /**
  * @purpose Gestiona el consumo de eventos desde un flujo de Redis, maneja los eventos según su tipo y invoca los manejadores registrados.
- * @purpose_en ** Manages event consumption from a Redis stream, handling events based on their type and invoking registered handlers.
- * @refactorable false
- * @classification ** Business Service
- * @complexity ** Medium
- * @fingerprint exports:1,imports:2,sig:1fveqbp
- * @lastUpdated 2026-06-25T09:21:35.544Z
+ * @purpose_en Manages event consumption from a Redis stream, handling events based on their type and invoking registered handlers.
+ * @refactorable true (contains too many state variables and UI parts)
+ * @classification Business Service
+ * @complexity Medium
+ * @fingerprint exports:1,imports:2,sig:v5nqcw
+ * @lastUpdated 2026-06-26T10:04:02.632Z
  */
 
 import { Redis } from '@upstash/redis';

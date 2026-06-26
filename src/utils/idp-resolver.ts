@@ -1,11 +1,11 @@
 /**
  * @purpose Gestiona la recuperación de información del inquilino y la verificación de la caducidad de la sesión desde el proveedor de identidad central.
  * @purpose_en Manages fetching tenant information and verifying session expiry from the Central Identity Provider.
- * @refactorable false
+ * @refactorable true (contains too many state variables and UI parts)
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:2,imports:4,sig:jvpbwy
- * @lastUpdated 2026-06-23T23:25:37.359Z
+ * @fingerprint exports:2,imports:5,sig:o61cqg
+ * @lastUpdated 2026-06-26T10:04:15.432Z
  */
 
 import { logger } from './logger';

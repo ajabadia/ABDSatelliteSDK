@@ -1,6 +1,11 @@
 /**
- * @purpose Proporciona un cliente Redis (Upstash REST) para cachear sesiones y verificaciones con fallback transparente.
- * @purpose_en Provides a Redis client (Upstash REST) for caching sessions and verifications with transparent fallback.
+ * @purpose Gestiona caché para sesiones y verificaciones utilizando Redis con un mecanismo de fallback.
+ * @purpose_en Manages caching for sessions and verifications using Redis with a fallback mechanism.
+ * @refactorable false
+ * @classification Helper Utility
+ * @complexity Low
+ * @fingerprint exports:6,imports:1,sig:o5ww0s
+ * @lastUpdated 2026-06-26T10:03:51.822Z
  */
 
 import { Redis } from '@upstash/redis';

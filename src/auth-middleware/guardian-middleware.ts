@@ -1,11 +1,11 @@
 /**
  * @purpose Valida el acceso del usuario a los recursos según las acciones y políticas utilizando el motor Guardian en la gobernanza de inquilinos.
  * @purpose_en Validates user access to resources based on actions and policies using the Guardian Engine in Tenant Governance.
- * @refactorable false
+ * @refactorable true (contains too many state variables and UI parts)
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:2,imports:4,sig:8cryqa
- * @lastUpdated 2026-06-25T09:20:26.634Z
+ * @fingerprint exports:2,imports:4,sig:6438py
+ * @lastUpdated 2026-06-26T10:03:40.965Z
  */
 
 /**

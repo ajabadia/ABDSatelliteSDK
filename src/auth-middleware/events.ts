@@ -1,11 +1,11 @@
 /**
- * @purpose Proporciona constantes y tipos para eventos y entidades relacionados con los exámenes utilizados en el ABDSatelliteSDK.
+ * @purpose Proporciona constantes y tipos para eventos y entidades relacionados con quizzes utilizados en ABDSatelliteSDK.
  * @purpose_en Defines constants and types for quiz-related events and entities used in the ABDSatelliteSDK.
  * @refactorable false
  * @classification Data/Constants
  * @complexity Low
- * @fingerprint exports:4,imports:0,sig:1t0thvo
- * @lastUpdated 2026-06-23T23:24:26.339Z
+ * @fingerprint exports:6,imports:0,sig:1lmmgek
+ * @lastUpdated 2026-06-26T10:03:38.358Z
  */
 
 /**

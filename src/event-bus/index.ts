@@ -4,8 +4,8 @@
  * @refactorable false
  * @classification Type Definition
  * @complexity Low
- * @fingerprint exports:1,imports:0,sig:e0eyqr
- * @lastUpdated 2026-06-25T09:21:40.760Z
+ * @fingerprint exports:1,imports:0,sig:htpqmz
+ * @lastUpdated 2026-06-26T10:04:04.481Z
  */
 
 export { createPublisher } from './publisher';

@@ -1,11 +1,11 @@
 /**
- * @purpose Gestiona autenticación y autorización middleware para el ABDSatelliteSDK, manejando sesiones de usuario y redirigiendo a un proveedor de autenticación.
- * @purpose_en Handles authentication and authorization middleware for the ABDSatelliteSDK, managing user sessions and redirecting to an authentication provider.
+ * @purpose Gestiona middleware de autenticación y autorización para ABDSatelliteSDK, maneja sesiones de usuario y redirige a un proveedor de autenticación.
+ * @purpose_en Manages authentication and authorization middleware for the ABDSatelliteSDK, handling user sessions and redirecting to an authentication provider.
  * @refactorable true (contains too many state variables and UI parts)
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:2,imports:7,sig:1lt5j37
- * @lastUpdated 2026-06-23T20:31:32.493Z
+ * @fingerprint exports:2,imports:7,sig:1jd3dfs
+ * @lastUpdated 2026-06-26T10:03:46.872Z
  */
 
 import { NextRequest, NextResponse } from 'next/server';

@@ -1,76 +1,37 @@
-import { describe, it, expect } from 'vitest';
-import { generateTenantCss, type ThemeConfig } from './css-generator';
+import { describe, it, expect, vi } from 'vitest';
+import { generateTenantCss } from './css-generator';
 
-describe('generateTenantCss', () => {
-  it('should return empty string when theme is empty or missing primary color', () => {
-    expect(generateTenantCss({} as unknown as ThemeConfig)).toBe('');
-    expect(generateTenantCss({ secondary: '#000000' } as unknown as ThemeConfig)).toBe('');
+describe('generateTenantCss (from @ajabadia/styles)', () => {
+  it('should fall back to Tech-Noir Cyan defaults if empty input is provided', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const css = generateTenantCss({});
+
+    expect(css).toContain('--primary: hsl(189 94% 43%) !important;');
+    expect(css).toContain('--secondary: hsl(217 33% 17%) !important;');
+    expect(css).toContain('--radius: 0.15rem !important;');
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
   });
 
-  it('should generate valid CSS variables for primary and default secondary/accent values', () => {
-    const theme: ThemeConfig = {
-      primary: '#38bdf8', // Light blue
-    };
+  it('should generate HSL CSS variables for a valid theme', () => {
+    const css = generateTenantCss({ primary: '#38bdf8' });
 
-    const css = generateTenantCss(theme);
-    
-    expect(css).toContain('--primary: #38bdf8');
-    expect(css).toContain('--secondary: #1e293b'); // default secondary
-    expect(css).toContain('--accent: #38bdf8'); // default accent (equals primary)
-    expect(css).toContain('--radius: 0.75rem'); // default radius
+    expect(css).toContain('--primary: hsl(198 93% 60%) !important;');
+    expect(css).toContain('--radius: 0.75rem !important;');
   });
 
-  it('should override secondary, accent, and radius values when specified', () => {
-    const theme: ThemeConfig = {
-      primary: '#38bdf8',
-      secondary: '#0f172a',
-      accent: '#f43f5e',
-      radius: '1rem',
-    };
+  it('should force "--radius: 0px" when rounded is set to false', () => {
+    const css = generateTenantCss({ primary: '#38bdf8', rounded: false });
 
-    const css = generateTenantCss(theme);
-
-    expect(css).toContain('--primary: #38bdf8');
-    expect(css).toContain('--secondary: #0f172a');
-    expect(css).toContain('--accent: #f43f5e');
-    expect(css).toContain('--radius: 1rem');
+    expect(css).toContain('--radius: 0px !important;');
   });
 
-  it('should force "--radius: 0rem" when rounded is set to false', () => {
-    const theme: ThemeConfig = {
-      primary: '#38bdf8',
-      rounded: false,
-    };
+  it('should generate dark mode colors in .dark selector', () => {
+    const css = generateTenantCss({ primary: '#38bdf8' });
 
-    const css = generateTenantCss(theme);
-
-    expect(css).toContain('--radius: 0rem');
-  });
-
-  it('should generate auto-calculated dark mode colors by default', () => {
-    const theme: ThemeConfig = {
-      primary: '#38bdf8', // Light blue
-      autoDarkMode: true,
-    };
-
-    const css = generateTenantCss(theme);
-
-    // .dark selector rules should be defined
     expect(css).toContain('.dark {');
-    expect(css).toContain('--primary:');
-    expect(css).toContain('--accent:');
-  });
-
-  it('should use explicit dark mode overrides if provided', () => {
-    const theme: ThemeConfig = {
-      primary: '#38bdf8',
-      primaryDark: '#0284c7',
-      accentDark: '#1d4ed8',
-    };
-
-    const css = generateTenantCss(theme);
-
-    expect(css).toContain('--primary: #0284c7');
-    expect(css).toContain('--accent: #1d4ed8');
+    expect(css).toContain('--primary: hsl(190 100% 68%) !important;');
   });
 });

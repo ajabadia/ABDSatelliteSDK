@@ -1,11 +1,11 @@
 /**
- * @purpose Valida, decodifica y genera tokens JWT.
+ * @purpose Valida y genera tokens JWT.
  * @purpose_en Validates JWT tokens, decodes their payloads, and generates new tokens.
  * @refactorable false
  * @classification Helper Utility
  * @complexity Low
- * @fingerprint exports:2,imports:2,sig:14o1kl
- * @lastUpdated 2026-06-25
+ * @fingerprint exports:4,imports:2,sig:1w3o3h5
+ * @lastUpdated 2026-06-26T10:03:56.265Z
  */
 
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';

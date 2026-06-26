@@ -1,11 +1,11 @@
 /**
- * @purpose Gestiona cifrado AES-256-CBC transparente a nivel campo de Mongoose para campos PII especificados, cifrando al guardar y descifrándolo al leer.
+ * @purpose Gestiona cifrado AES-256-CBC transparente a nivel campo para campos PII especificados en esquemas Mongoose, cifrando al guardar y descifrándolo al leer.
  * @purpose_en Manages transparent field-level AES-256-CBC encryption for specified PII fields in Mongoose schemas, encrypting on save and decrypting on read.
  * @refactorable false
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:1,imports:2,sig:4p2309
- * @lastUpdated 2026-06-25T09:21:18.302Z
+ * @fingerprint exports:1,imports:2,sig:vyb47i
+ * @lastUpdated 2026-06-26T10:03:59.770Z
  */
 
 /**
