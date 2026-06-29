@@ -1,5 +1,5 @@
  WARN  Issue while reading "D:\desarrollos\ABDSuite\ABDSatelliteSDK\.npmrc". Failed to replace env in config: ${GITHUB_NPM_TOKEN}
 
-> @ajabadia/satellite-sdk@1.0.77 typecheck D:\desarrollos\ABDSuite\ABDSatelliteSDK
+> @ajabadia/satellite-sdk@1.0.90 typecheck D:\desarrollos\ABDSuite\ABDSatelliteSDK
 > tsc --noEmit
 
