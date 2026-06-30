@@ -4,13 +4,14 @@
  * @refactorable false
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:1,imports:3,sig:11f0kto
- * @lastUpdated 2026-06-25T09:21:48.229Z
+ * @fingerprint exports:1,imports:4,sig:161occi
+ * @lastUpdated 2026-06-30T13:01:45.796Z
  */
 
 import crypto from 'crypto';
 import { Redis } from '@upstash/redis';
 import type { EventEnvelope, EventBusConfig } from './types';
+import { validateEnvelope, getLatestVersion } from './schema-registry';
 
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -23,7 +24,14 @@ export function createPublisher(config: EventBusConfig) {
   const source = config.source;
 
   return {
-    async publish(type: string, data: Record<string, unknown>, subject?: string): Promise<string | null> {
+    async publish(
+      type: string,
+      data: Record<string, unknown>,
+      subject?: string,
+      schemaVersion?: number,
+    ): Promise<string | null> {
+      const version = (schemaVersion ?? getLatestVersion(type)) || 1;
+
       const envelope: EventEnvelope = {
         id: crypto.randomUUID(),
         type,
@@ -31,8 +39,14 @@ export function createPublisher(config: EventBusConfig) {
         subject,
         data,
         timestamp: new Date().toISOString(),
-        schemaVersion: 1,
+        schemaVersion: version,
       };
+
+      const validation = validateEnvelope(envelope);
+      if (!validation.valid) {
+        console.error(`[EVENT_BUS] Schema validation failed for ${type} v${version}:`, validation.error);
+        return null;
+      }
 
       const redis = getRedis();
       if (redis) {

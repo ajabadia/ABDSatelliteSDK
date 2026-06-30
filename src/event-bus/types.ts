@@ -4,8 +4,8 @@
  * @refactorable false
  * @classification Type Definition
  * @complexity Low
- * @fingerprint exports:5,imports:0,sig:fq5h5v
- * @lastUpdated 2026-06-26T10:04:06.826Z
+ * @fingerprint exports:5,imports:0,sig:qb9wky
+ * @lastUpdated 2026-06-30T13:01:47.022Z
  */
 
 export interface EventEnvelope {
@@ -26,6 +26,7 @@ export interface EventBusConfig {
   source: string;
   pollIntervalMs?: number;
   fallbackStorage?: (envelope: EventEnvelope) => Promise<void>;
+  validateSchema?: boolean;
 }
 
 export interface StreamInfo {

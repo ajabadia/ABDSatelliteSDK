@@ -4,12 +4,13 @@
  * @refactorable true (contains too many state variables and UI parts)
  * @classification Business Service
  * @complexity Medium
- * @fingerprint exports:1,imports:2,sig:v5nqcw
- * @lastUpdated 2026-06-26T10:04:02.632Z
+ * @fingerprint exports:1,imports:3,sig:167y1vc
+ * @lastUpdated 2026-06-30T14:20:27.120Z
  */
 
 import { Redis } from '@upstash/redis';
 import type { EventEnvelope, EventHandler, EventBusConfig } from './types';
+import { validateEnvelope } from './schema-registry';
 
 const LAST_ID_PREFIX = 'eventbus:lastid:';
 
@@ -46,7 +47,7 @@ async function setPersistedLastId(redis: Redis, eventType: string, lastId: strin
   await redis.set(`${LAST_ID_PREFIX}${eventType}`, lastId);
 }
 
-async function pollOnce(useRedisLastId = false): Promise<void> {
+async function pollOnce(validateSchema: boolean, useRedisLastId = false): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
 
@@ -66,6 +67,16 @@ async function pollOnce(useRedisLastId = false): Promise<void> {
         } catch {
           continue;
         }
+
+        if (validateSchema) {
+          const validation = validateEnvelope(envelope);
+          if (!validation.valid) {
+            console.warn(`[EVENT_BUS] Skipping event ${envelope.id} (${envelope.type} v${envelope.schemaVersion}): ${validation.error}`);
+            newLastId = entry.id;
+            continue;
+          }
+        }
+
         for (const handler of handlers) {
           await handler(envelope);
         }
@@ -102,6 +113,7 @@ function flattenStreamResponse(response: unknown): StreamEntry[] {
 
 export function createConsumer(config: EventBusConfig) {
   const pollInterval = config.pollIntervalMs ?? 10000;
+  const validateSchema = config.validateSchema ?? false;
 
   return {
     on(eventType: string, handler: EventHandler): void {
@@ -115,7 +127,7 @@ export function createConsumer(config: EventBusConfig) {
 
     start(): void {
       if (state.intervalId) return;
-      state.intervalId = setInterval(() => { void pollOnce(); }, pollInterval);
+      state.intervalId = setInterval(() => { void pollOnce(validateSchema); }, pollInterval);
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[EVENT_BUS] Consumer started (poll every ${pollInterval}ms)`);
       }
@@ -128,14 +140,12 @@ export function createConsumer(config: EventBusConfig) {
       }
     },
 
-    /** In-memory lastId poll (legacy, for long-running instances) */
     async pollOnce(): Promise<void> {
-      return pollOnce(false);
+      return pollOnce(validateSchema, false);
     },
 
-    /** Per-request poll using Redis-persisted lastId (serverless-friendly) */
     async processPending(): Promise<void> {
-      return pollOnce(true);
+      return pollOnce(validateSchema, true);
     },
   };
 }
