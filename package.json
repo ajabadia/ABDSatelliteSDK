@@ -30,17 +30,17 @@
     "cloudinary": "^2.5.1",
     "fast-json-stable-stringify": "2.1.0",
     "jose": "6.2.3",
-    "mongoose": "9.6.3",
+    "mongoose": "9.7.3",
     "zod": "4.4.3"
   },
   "peerDependencies": {
     "@ajabadia/styles": "^1.0.0",
-    "next": ">=14.0.0",
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@ajabadia/styles": "latest",
+    "@ajabadia/styles": "^1.0.99",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
